@@ -54,9 +54,6 @@ class FG_eval {
       if (vars[v_start + i] < 0) { // Penalize negative speed
         fg[0] += square(vars[v_start + i]) * cost_weights[8];
       }
-      if (CppAD::fabs(vars[psi_start + i]) > 2 * M_PI) { // Penalize out of range psi
-        fg[0] += square(CppAD::fabs(vars[psi_start + i]) - 2 * M_PI) * cost_weights[9];
-      }
     }
 
     // Penalize large delta and acceleration changes, but lesser of the weight
@@ -70,17 +67,12 @@ class FG_eval {
       if (vars[a_start + i] > 0) { // penalize large acceleration, but not deceleration
         fg[0] += square(vars[a_start + i]) * cost_weights[5];
       }
+      
+      fg[0] += square(vars[delta_start + i]) * cost_weights[4];
 
       // Penalize large deceleration while speed is low 
       if (vars[a_start + i] < 0 && vars[v_start + i] < vars[a_start + i] ) {
         fg[0] += square(vars[v_start + i] - vars[a_start + i]) * cost_weights[7];
-      }
-      
-      if (CppAD::fabs(vars[epsi_start + i]) <= Config::epsiRef) {
-        fg[0] += square(vars[delta_start + i]) * cost_weights[4];
-      }
-      else if (CppAD::fabs(vars[epsi_start + i]) <= Config::epsiPanic) {
-        fg[0] += square(vars[delta_start + i]) * 0.1 * cost_weights[4];
       }
     }
 
@@ -116,7 +108,11 @@ class FG_eval {
       fg[1 + x_start + i] = x1 - (x0 + CppAD::cos(psi0) * vdt);
       fg[1 + y_start + i] = y1 - (y0 + CppAD::sin(psi0) * vdt);
       fg[1 + psi_start + i] = psi1 - psi;
-      fg[1 + v_start + i] = v1 - (v0 + a0 * dt);
+      AD<double> v = v0 + a0 * dt;
+      if (v < 0) { // no negative speed!
+        v = 0;
+      }
+      fg[1 + v_start + i] = v1 - v;
       // we want the errors to be close to 0
       fg[1 + cte_start + i] = cte1 - (polyeval(coeffs, x0) - y0 + CppAD::sin(epsi0) * vdt);
       fg[1 + epsi_start + i] = epsi1 - (psi - polypsi(coeffs, x0, dir));

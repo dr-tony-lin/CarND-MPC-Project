@@ -90,12 +90,12 @@ vector<double> run_mpc(double px, double py, double psi, double v, double steer,
   double steer_value;
 
   if (max_yaw_change < 0) {
-    Config::yawLow = max_yaw_change * 1.05;
+    Config::yawLow = max_yaw_change * 0.5;
     Config::yawHigh = 0.1;
   }
   else {
     Config::yawLow = -0.1;
-    Config::yawHigh = max_yaw_change * 1.05;
+    Config::yawHigh = max_yaw_change * 0.5;
   }
   // Solve MPC
   auto result = mpc.Solve(state, poly, target_speed, ptsx[1] - ptsx[0], x_trajectory, y_trajectory);
