@@ -5,6 +5,22 @@
 #include "Eigen/Core"
 
 /**
+ * Mile per hour to meters per second
+ * @param mph the value to convert
+ */ 
+inline double MpH2MpS(double mph) {
+  return mph * 1609.34 / 3600.0;
+}
+
+/**
+ * Meter per second to mile per hour
+ * @param mps the value to convert
+ */ 
+inline double MpS2MpH(double mps) {
+  return mps * 3600.0 / 1609.34;
+}
+
+/**
  * Evaluate a polynomial.
  * @param coeffs the coefficients
  * @param x the variable
@@ -48,20 +64,50 @@ extern Eigen::VectorXd polyfit(Eigen::VectorXd xvals, Eigen::VectorXd yvals, int
 
 /**
  * Convert degree to radian
+ * @param x degree to convert
  */ 
 inline double deg2rad(double x) { return x * M_PI / 180; }
 
 /**
  * Convert radian to degree
+ * @param x radian to convert
  */
 inline double rad2deg(double x) { return x * 180 / M_PI; }
 
+/**
+ * Compute square, as not sure if pow if optimized
+ * @param a the value to square
+ */ 
 template<typename T> T square(const T &a) {return a * a;}
 
+/**
+ * Compute the slop in radian of the polynomial at x in direction x
+ * @param poly the polynomial
+ * @param x the x value
+ * @param dir the direction, only the sign is important, +x or -x direction
+ */ 
 extern double polypsi(Eigen::VectorXd poly, double x, double dir);
 
+/**
+ * Compute the slop in radian of the polynomial at x in direction x
+ * @param poly the polynomial
+ * @param x the x value of type CppAD::AD<double>
+ * @param dir the direction, only the sign is important, +x or -x direction
+ * @return the radian in type CppAD::AD<double>
+ */
 extern CppAD::AD<double> polypsi(Eigen::VectorXd poly, CppAD::AD<double> x, double dir);
 
+/**
+ * Update the vehicle position and psi after dt seconds
+ * @param dt the time to move (in seconds)
+ * @param x the x coordinate
+ * @param y the y coordinate
+ * @param psi the current orientation
+ * @param velocity the current velocity (meter per second)
+ * @param steering the current steering angle
+ * @param acceleration the current acceleration (meter per second per second)
+ * @param length the Lf of the vehicle
+ */ 
 extern void moveVehicle(double dt, double &x, double &y, double &psi, double &velocity,
   double steering, double acceleration, double length);
 
@@ -71,6 +117,22 @@ extern void moveVehicle(double dt, double &x, double &y, double &psi, double &ve
  * @param max the maximal speed permitted
  */ 
 double computeSpeedTarget(double angle, double max);
+
+/**
+ * Simple logic to adjust speed according to steering angle,
+ * assuming the polynomial is convex
+ * @param poly the polynomial
+ * @param x0 the starting position
+ * @param x1 the ending position
+ */ 
+double computeYawChange(Eigen::VectorXd poly, double x0, double x1);
+
+/**
+ * Simple logic to adjust speed according to steering angle
+ * @param angle the angle
+ * @param max the maximal speed permitted
+ */ 
+double computeYawChangeSpeedLimit(double yawChange, double max);
 
 /**
  * Simple logic to adjust speed according to steering angle
@@ -133,7 +195,6 @@ extern void vehicleToGlobal(double &x, double &y, double px, double py, double p
  * Normalize the given angle to [-PI, PI) range
  * @param a the angle
  */                      
-
 template<typename T> T normalizeAngle(const T &a) {
   T result = a;
   while (result >= M_PI) result -= 2. * M_PI;

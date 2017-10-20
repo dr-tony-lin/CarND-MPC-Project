@@ -44,54 +44,65 @@ CppAD::AD<double> polypsi(Eigen::VectorXd poly, CppAD::AD<double> x, double dir)
   return normalizeAngle(psi);
 }
 
-/**
- * Simple logic to adjust speed according to steering angle
- * @param angle the angle
- * @param max the maximal speed permitted
- */ 
 double computeSpeedTarget(double angle, double max) {
   double y = fabs(angle);
   for (int i = 0; i < Config::steers.size(); i++) {
     if (y <= Config::steers[i]) {
       if (Config::steerSpeeds.size() > i) {
-        return Config::steerSpeeds[i];
+        return std::fmin(Config::steerSpeeds[i], max);
       }
       else {
-        return Config::steerSpeeds.back();
+        return std::fmin(Config::steerSpeeds.back(), max);
       }
     }
   }
 
-  return Config::steerSpeeds.back();
+  return std::fmin(Config::steerSpeeds.back(), max);
 }
 
-/**
- * Simple logic to adjust speed according to steering angle
- * @param angle the angle
- * @param max the maximal speed permitted
- */ 
 CppAD::AD<double>  computeSpeedTarget(CppAD::AD<double>  angle, double max) {
   CppAD::AD<double>  y = CppAD::fabs(angle);
   for (int i = 0; i < Config::steers.size(); i++) {
     if (y <= Config::steers[i]) {
       if (Config::steerSpeeds.size() > i) {
-        return Config::steerSpeeds[i];
+        return Config::steerSpeeds[i] < max? Config::steerSpeeds[i]: max;
       }
       else {
-        Config::steerSpeeds.back();
+        return Config::steerSpeeds.back() < max? Config::steerSpeeds.back(): max;
       }
     }
   }
 
-  return Config::steerSpeeds.back();
+  return Config::steerSpeeds.back() < max? Config::steerSpeeds.back(): max;
+}
+
+double computeYawChange(Eigen::VectorXd poly, double x0, double x1) {
+  double psi0 = polypsi(poly, x0, x1 - x0);
+  double psi1 = polypsi(poly, x1, x1 - x0);
+  return psi1 - psi0;
+}
+
+double computeYawChangeSpeedLimit(double yawChange, double max) {
+  double y = fabs(yawChange);
+  for (int i = 0; i < Config::yawChanges.size(); i++) {
+    if (y <= Config::yawChanges[i]) {
+      if (Config::yawChangeSpeeds.size() > i) {
+        return std::fmin(Config::yawChangeSpeeds[i], max);
+      }
+      else {
+        return std::fmin(Config::yawChangeSpeeds.back(), max);
+      }
+    }
+  }
+  return std::fmin(Config::yawChangeSpeeds.back(), max);
 }
 
 /**
  * Simple logic to compute throttle from acceleration.
- * @param accel the acceleration to reach
- * @param target the target speed
- * @param max_accel the maximal acceleration
- * @param max_decel the maximal deceleration
+ * @param accel the acceleration to reach (meter/sec/sec)
+ * @param target the target speed (meter/sec)
+ * @param max_accel the maximal acceleration (meter/sec/sec)
+ * @param max_decel the maximal deceleration (meter/sec/sec)
  */ 
 double computeThrottle(double accel, double target, double max_accel, double max_decel) {
   // the throttle to keep if no accel, divide by Config::maxSpeed is a rough estimate of target speed,
@@ -162,37 +173,24 @@ void vehicleToGlobal(double &x, double &y, double px, double py, double psi) {
 // Implements a simple car motion model
 void moveVehicle(double dt, double &x, double &y, double &psi, double &velocity,
   double steering, double acceleration, double length) {
-  // perturb the acceleration and steering angle with gaussian noise
-  
-  // clamp the steering angle
-  if (steering > Config::maxSteering) steering = Config::maxSteering;
-  if (steering < -Config::maxSteering) steering = -Config::maxSteering;
-
-  if (acceleration > Config::maxAcceleration) acceleration = Config::maxAcceleration;
-  if (acceleration < Config::maxDeceleration) acceleration = Config::maxDeceleration;
-
-  double dist = (velocity + acceleration * dt / 2) * dt;
-  // Compute turing angle from steering angle
-  double turn = tan(steering) * dist / length;
-  double new_psi = normalizeAngle(psi + turn);
-  double radius = 0;
-  if (fabs(turn) > EPSILON) {  // turn is not 0
-    // Compute the turn radius
-    radius = dist / turn; // del psi = turn / dt
-    // update x and y
-    x += radius * (sin(new_psi) - sin(psi));
-    y += radius * (cos(psi) - cos(new_psi));
-  } else {  // turn is 0
-    // update x and y
-    x += dist * cos(psi);
-    y += dist * sin(psi);
-  }
-
-  // update velocity
-  velocity += acceleration * dt;
+  double dist = (velocity + acceleration * dt / 2.0) * dt;
+  // COmpute delta psi
+  double delta_psi = steering * dist / length;
+  // New psi
+  double new_psi = normalizeAngle(psi + delta_psi);
+  // New position
+  double px = x + dist * cos(psi);
+  double py = y + dist * sin(psi);
+  // new velocity
+  double v = velocity + acceleration * dt;
   if (velocity > Config::maxSpeed) velocity = Config::maxSpeed;
-  std::cout << "Move: " << turn << " " << psi << " " << new_psi << " " << dist << " " << steering 
-  << " " << radius <<  " " << acceleration << " " << velocity << std::endl;
+  std::cout << "Move: " << x << ", " << y << ", psi:" << psi << ", steering: " << steering
+            <<  ", accel: " << acceleration << ", velocity: " << velocity 
+            << ", delta psi: " << delta_psi << ", to: " << px << ", " << py << ", psi: " << new_psi 
+            << ", velocity: " << v << ", dist: " << dist << std::endl;
   // update yaw
+  x = px;
+  y = py;
   psi = new_psi;
+  velocity = v;
 }

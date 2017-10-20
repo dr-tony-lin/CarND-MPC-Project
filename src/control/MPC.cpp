@@ -110,7 +110,7 @@ class FG_eval {
       AD<double> a0 = vars[a_start + i - 1];
 
       // v0 * dt
-      AD<double> vdt = v0* dt;
+      AD<double> vdt = v0 * dt;
       // new psi
       AD<double> psi = psi0 + delta0 * vdt / Config::Lf;
       fg[1 + x_start + i] = x1 - (x0 + CppAD::cos(psi0) * vdt);
@@ -185,8 +185,6 @@ vector<double> MPC::Solve(Eigen::VectorXd &state, Eigen::VectorXd &coeffs, doubl
   vars[v_start] = state[3];
   vars[cte_start] = state[4];
   vars[epsi_start] = state[5];
-  vars[delta_start] = state[6];
-  vars[a_start] = state[7];
 
   // Set all non-actuators upper and lowerlimits
   // to the max negative and positive values.
@@ -198,8 +196,8 @@ vector<double> MPC::Solve(Eigen::VectorXd &state, Eigen::VectorXd &coeffs, doubl
   // Set all non-actuators upper and lowerlimits
   // to the max negative and positive values.
   for (size_t i = psi_start; i < v_start; i++) {
-    vars_lowerbound[i] = -M_PI;
-    vars_upperbound[i] = M_PI;
+    vars_lowerbound[i] = Config::yawLow;
+    vars_upperbound[i] = Config::yawHigh;
   }
   
   // Set all non-actuators upper and lowerlimits
@@ -265,9 +263,9 @@ vector<double> MPC::Solve(Eigen::VectorXd &state, Eigen::VectorXd &coeffs, doubl
   // Check some of the solution values
   bool ok = solution.status == CppAD::ipopt::solve_result<Dvector>::success;
 
-  // if (!ok) {
-  //   throw std::string("Ipopt failed with ") + std::to_string(solution.status);
-  // }
+  if (!ok) {
+    throw std::string("Ipopt failed with ") + std::to_string(solution.status);
+  }
 
   // Update x, y trajectory if provided
   if (x_trajectory) {

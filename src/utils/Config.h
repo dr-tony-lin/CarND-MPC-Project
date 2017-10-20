@@ -29,7 +29,12 @@ public:
   static long latency;
 
   /**
-   * The maximal polynominal order
+   * look ahead prediction time in seconds
+   */ 
+  static double lookahead;
+  
+  /**
+   * The maximal polynomial order
    */
   static int maxPolyOrder;
 
@@ -52,6 +57,16 @@ public:
    * Maximal speed of vehicle
    */ 
   static double maxSpeed;
+  
+  /**
+   * Minimal yaw
+   */ 
+  static double yawLow;
+  
+  /**
+   * Maximal yaw
+   */ 
+  static double yawHigh;
 
   /**
    * Length from the front wheels to the center of the back wheels
@@ -85,6 +100,16 @@ public:
    */ 
   static std::vector<double> steerSpeeds;
   
+  /**
+   * Yaw change to speed maximum
+   */ 
+  static std::vector<double> yawChanges;
+  
+  /**
+   * Yaw change to speed maximum, the last one is for the rest
+   */ 
+  static std::vector<double> yawChangeSpeeds;
+
   /**
    * Load configuration from file
    * @param fileName name of the config file 

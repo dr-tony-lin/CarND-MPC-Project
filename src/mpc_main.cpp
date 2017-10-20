@@ -2,6 +2,7 @@
 #include <uWS/uWS.h>
 #include <chrono>
 #include <iostream>
+#include <utility>
 #include <thread>
 #include <vector>
 #include "Eigen/Core"
@@ -32,16 +33,93 @@ string hasData(string s) {
   return "";
 }
 
+/**
+ * Run MPC
+ * @param px the x coordinate of the vehicle
+ * @param py the y coordinate of the vehicle
+ * @param psi the orientation of the vehicle
+ * @param v the velocity of the vehicle
+ * @param steer thesteering angle of the vehicle
+ * @param ptsx the x trajectory of the center line
+ * @param ptsy the y trajectory of the center line
+ * @param x_trajectory the x trajectory of the center line in the vehicle's coordinate
+ * @param y_trajectory the y trajectory of the center line in the vehicle's coordinate
+ */
+vector<double> run_mpc(double px, double py, double psi, double v, double steer, vector<double> &ptsx, vector<double> &ptsy,
+         std::vector<double> *x_trajectory = NULL, std::vector<double> *y_trajectory = NULL) {
+  globalToVehicle(ptsx, ptsy, px, py, psi);
+  // Compute the polynomial coefficients
+  Eigen::VectorXd xVals(ptsx.size());
+  Eigen::VectorXd yVals(ptsx.size());
+  for (int i = 0; i < ptsx.size(); i++) {
+    xVals[i] = ptsx[i];
+    yVals[i] = ptsy[i];
+  }
+
+  double fiterr = 0;
+  int order = 2;
+  static Eigen::VectorXd poly;
+  do { // Compute the polynomial coefficients to an order that has small fitting error
+    poly = polyfit(xVals, yVals, order++);
+    for (int i = 0; i < ptsx.size(); i++) {
+      fiterr = square(ptsy[i] - polyeval(poly, ptsx[i]));
+    }
+  } while (fiterr > 1 && order < Config::maxPolyOrder);
+#ifdef VERBOSE_OUT
+    cout << "Polynominal: " << poly << endl;
+#endif
+
+  // Calculate the CTE
+  double cte = polyeval(poly, 0);
+  // Calculate the psi error
+  double px_psi = polypsi(poly, 0, ptsx[1] - ptsx[0]);
+  double epsi = -px_psi;
+#ifdef VERBOSE_OUT
+  cout << "Psi: " << psi<< ", ePsi: " << epsi<< ", psi at px: " << px_psi << ", cte: " << cte << ", fit err: " 
+       << fiterr << ", order: " << order << endl;
+#endif   
+  Eigen::VectorXd state(6);
+  state << 0, 0, 0, v, cte, epsi;
+
+  MPC mpc;
+  
+  // Compute the target speed using the estimated future psi
+  double max_yaw_change = computeYawChange(poly, px, ptsx[ptsx.size() - 1]);
+  double max_speed = computeYawChangeSpeedLimit(max_yaw_change, Config::maxSpeed);
+  double target_speed = computeSpeedTarget(steer, max_speed);
+  double steer_value;
+
+  if (max_yaw_change < 0) {
+    Config::yawLow = max_yaw_change * 1.05;
+    Config::yawHigh = 0.1;
+  }
+  else {
+    Config::yawLow = -0.1;
+    Config::yawHigh = max_yaw_change * 1.05;
+  }
+  // Solve MPC
+  auto result = mpc.Solve(state, poly, target_speed, ptsx[1] - ptsx[0], x_trajectory, y_trajectory);
+  double steer_angle = result[6];
+  double accel = std::min(result[7], target_speed - v);
+  steer_value = clamp(steer_angle / Config::maxSteering, -1.0, 1.0);
+#ifdef VERBOSE_OUT
+  cout << "Steering: " << steer_angle << ", " << result[9] << ", " << result[10] 
+        << ", accel: " << result[7] << ", speed: " << result[3] << ", steer: " << steer_value << ", target speed: "
+        << target_speed << ", CTE: " << result[4] << ", epsi: " << result[5] 
+        << ", cost: " << result[8] << ", max yar change: " << max_yaw_change << ", max speed: " << max_speed << endl;
+#endif
+  
+  return {result[0], result[1], result[2], result[3], steer_value, accel};
+}
+
 int main() {
   uWS::Hub h;
   // MPC is initialized here!
   MPC mpc;
+  static high_resolution_clock::time_point prev_time = high_resolution_clock::now();
 
   h.onMessage([&mpc](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length,
                      uWS::OpCode opCode) {
-    
-    // MPC is initialized here!
-    MPC mpc;
     // "42" at the start of the message means there's a websocket message event.
     // The 4 signifies a websocket message
     // The 2 signifies a websocket event
@@ -49,16 +127,23 @@ int main() {
 
     string sdata = string(data).substr(0, length);
 #ifdef VERBOSE_OUT   
-    cout << "Message: " << sdata << endl;
+    cout << "Message: " << ((stime - prev_time).count() * 10.0e-9) << "s, " << sdata << endl;
 #endif    
     if (sdata.size() > 2 && sdata[0] == '4' && sdata[1] == '2') {
+      static double steer_value = 0;
+      static double throttle_value = 0;
+      static double steer_angle = 0;
+      static double accel = 0;
+      static double prev_v = 0;
+
       string s = hasData(sdata);
       if (s != "") {
+        high_resolution_clock::time_point stime = high_resolution_clock::now();
+        double dt = (stime - prev_time).count() * 10.0e-9;
+
         auto j = json::parse(s);
         string event = j[0].get<string>();
         if (event == "telemetry") {
-          static vector<double> eval_ptsx;
-
           // j[1] is the data JSON object
           vector<double> ptsx = j[1]["ptsx"];
           vector<double> ptsy = j[1]["ptsy"];
@@ -67,83 +152,37 @@ int main() {
           double py = j[1]["y"];
           double psi = j[1]["psi"];
           double v = j[1]["speed"];
+          double throttle = j[1]["throttle"];
+          psi = normalizeAngle(psi);
+          v = MpH2MpS(v); // speed in meters/second
           double steer = j[1]["steering_angle"];
-
-          globalToVehicle(ptsx, ptsy, px, py, psi);
-
-          // Compute the polynominal coefficients
-          Eigen::VectorXd xVals(ptsx.size());
-          Eigen::VectorXd yVals(ptsx.size());
-          for (int i = 0; i < ptsx.size(); i++) {
-            xVals[i] = ptsx[i];
-            yVals[i] = ptsy[i];
+          steer = -steer; // Convert to normal radian
+          // Simulate car move to compensate the latency, but there is still a gap with the
+          // Car model implemented in the simulator
+          if (Config::latency) {
+            double ahead = Config::lookahead;
+            double dt = 0.01; // 10 millie seconds
+            while(ahead >= dt) {
+              moveVehicle(dt, px, py, psi, v, steer, throttle > 0? 
+                          accel*throttle: throttle>-0.5? -10: throttle<-0.75? -15: Config::maxDeceleration,
+                          Config::Lf);
+              ahead -= dt;
+            }
           }
 
-          double fiterr = 0;
-          int order = 2;
-          static Eigen::VectorXd poly;
-          if (eval_ptsx.size() == 0 || eval_ptsx[0] != ptsx[0]) { // new, compute the polynominal coefficients
-            do { // Compute the polynominal coefficients to an order that has small fitting error
-              poly = polyfit(xVals, yVals, order++);
-              for (int i = 0; i < ptsx.size(); i++) {
-                fiterr = square(ptsy[i] - polyeval(poly, ptsx[i]));
-              }
-            } while (fiterr > 1 && order < Config::maxPolyOrder);
-            eval_ptsx = ptsx;
-#ifdef VERBOSE_OUT
-            cout << "Polynominal: " << poly << endl;
-#endif
-          }
-
-          // Calculate the CTE
-          double cte = polyeval(poly, 0);
-          // Calculate the psi error
-          double px_psi = polypsi(poly, 0, ptsx[1] - ptsx[0]);
-          double epsi = -px_psi;
-#ifdef VERBOSE_OUT
-          cout << "Psi: " << psi<< ", ePsi: " << epsi<< ", psi at px: " << px_psi << ", cte: " << cte << ", fit err: " 
-               << fiterr << ", order: " << order << endl;
-#endif   
-          Eigen::VectorXd state(8);
-          state << 0, 0, 0, v, cte, epsi, steer, 
-                  clamp(computeSpeedTarget(steer, Config::maxSpeed) - v, Config::maxDeceleration, Config::maxAcceleration);
-
-          MPC mpc;
-          
 #ifdef PLOT_TRAJECTORY //Display the MPC predicted trajectory 
           // Trajectories points to display on the simulator, points are in reference to the vehicle's
           // coordinate system the points in the simulator are connected by a Yellow line
           vector<double> mpc_x_vals;
           vector<double> mpc_y_vals;
+          vector<double> result = run_mpc(px, py, psi, v, steer, ptsx, ptsy, &mpc_x_vals, &mpc_y_vals);
+#else
+          vector<double> result = run_mpc(px, py, psi, v, steer, ptsx, ptsy);
 #endif
-          // Compute the target speed using the estimated future psi
-          double target_speed = computeSpeedTarget(steer, Config::maxSpeed);
-          double steer_value = 0;
-          double throttle_value = 0;
-          try {
-            // Solve MPC
-            auto result = mpc.Solve(state, poly, target_speed, ptsx[1] - ptsx[0], &mpc_x_vals, &mpc_y_vals);
-            double steer_angle = result[6];
-            double accel = std::min(result[7], computeSpeedTarget(steer_angle, Config::maxSpeed) - v);
-            steer_value = -clamp(steer_angle / Config::maxSteering, -1.0, 1.0);
-            throttle_value = computeThrottle(accel, result[3], Config::maxAcceleration, Config::maxDeceleration);
-#ifdef VERBOSE_OUT
-            cout << "Steering: " << steer_angle << ", " << result[9] << ", " << result[10] 
-                 << ", accel: " << result[7] << ", speed: " << result[3] 
-                 << ", throttle: " << throttle_value  << ", steer: " << steer_value << ", target speed: "
-                 << target_speed << ", CTE: " << result[4] << ", epsi: " << result[5] 
-                 << ", cost: " << result[8] << endl;
-#endif
-#ifdef PLOT_TRAJECTORY
-            // Convert to vehicle coordinate
-            //globalToVehicle(mpc_x_vals, mpc_y_vals, px, py, psi);
-            
-#endif
-          } catch(std::string e) {
-            std::cout << "Ipopt failed! " << e << std::endl;
-            steer_value = steer;
-            throttle_value = computeThrottle(0, v, Config::maxAcceleration, Config::maxDeceleration);
-          }
+          steer_angle = result[4];
+          accel = result[5];
+          steer_value = -clamp(steer_angle / Config::maxSteering, -1.0, 1.0);
+          throttle_value = computeThrottle(accel, result[3], Config::maxAcceleration, Config::maxDeceleration);
 
           nanoseconds elapsed = duration_cast<nanoseconds> (high_resolution_clock::now() - stime);
 
