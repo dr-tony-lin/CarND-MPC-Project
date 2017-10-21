@@ -134,13 +134,10 @@ int main() {
       static double throttle_value = 0;
       static double steer_angle = 0;
       static double accel = 0;
-      static double prev_v = 0;
 
       string s = hasData(sdata);
       if (s != "") {
         high_resolution_clock::time_point stime = high_resolution_clock::now();
-        double dt = (stime - prev_time).count() * 10.0e-9;
-
         auto j = json::parse(s);
         string event = j[0].get<string>();
         if (event == "telemetry") {
@@ -156,15 +153,24 @@ int main() {
           psi = normalizeAngle(psi);
           v = MpH2MpS(v); // speed in meters/second
           double steer = j[1]["steering_angle"];
+
+#ifdef COLLECT_TRAINING_DATA 
+          // collect data for training throttle with respect to acceleration, 
+          //steer and yaw (while steer and yaw may correlate)
+          double dt = (stime - prev_time).count() * 10.0e-9;
+          cerr << dt << "," << psi << "," << v << "," << throttle << "," << throttle_value
+               << "," << steer  << "," << steer_value << endl;
+#endif
+
           steer = -steer; // Convert to normal radian
           // Simulate car move to compensate the latency, but there is still a gap with the
           // Car model implemented in the simulator
           if (Config::latency) {
             double ahead = Config::lookahead;
-            double dt = 0.01; // 10 millie seconds
+            double dt = 0.005; // 5 millie seconds, this seems perform a bit better than a single shot.
             while(ahead >= dt) {
               moveVehicle(dt, px, py, psi, v, steer, throttle > 0? 
-                          accel*throttle: throttle>-0.5? -10: throttle<-0.75? -15: Config::maxDeceleration,
+                          accel: throttle>-0.5? -10: throttle<-0.7? -18: Config::maxDeceleration,
                           Config::Lf);
               ahead -= dt;
             }
@@ -185,7 +191,10 @@ int main() {
           throttle_value = computeThrottle(accel, result[3], Config::maxAcceleration, Config::maxDeceleration);
 
           nanoseconds elapsed = duration_cast<nanoseconds> (high_resolution_clock::now() - stime);
-
+          
+#ifdef COLLECT_TRAINING_DATA
+cerr << psi << "," << v << "," << throttle << "," << steer << endl;
+#endif
           json msgJson;
           // NOTE: Remember to divide by deg2rad(25) before you send the steering value back.
           // Otherwise the values will be in between [-deg2rad(25), deg2rad(25] instead of [-1, 1].

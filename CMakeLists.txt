@@ -18,6 +18,10 @@ if (TRACE_IPOPT)
     add_definitions(-DTRACE_IPOPT=1)
 endif(TRACE_IPOPT)
 
+if (COLLECT_DATA)
+    add_definitions(-DCOLLECT_DATA=1)
+endif(COLLECT_DATA)
+
 set(CXX_FLAGS "-Wall")
 set(CMAKE_CXX_FLAGS "${CXX_FLAGS}")
 
