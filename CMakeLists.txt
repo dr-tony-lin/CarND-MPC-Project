@@ -10,13 +10,17 @@ if (NOT SKIP_TRAJECTORY)
     add_definitions(-DPLOT_TRAJECTORY=1)
 endif(NOT SKIP_TRAJECTORY)
 
-if (NOT QUIET)
+if (VERBOSE_OUT)
     add_definitions(-DVERBOSE_OUT=1)
-endif(NOT QUIET)
+endif(VERBOSE_OUT)
 
 if (TRACE_IPOPT)
     add_definitions(-DTRACE_IPOPT=1)
 endif(TRACE_IPOPT)
+
+if (EXIT_ON_IPOPT_FAILURE)
+    add_definitions(-DEXIT_ON_IPOPT_FAILURE=1)
+endif(EXIT_ON_IPOPT_FAILURE)
 
 if (COLLECT_DATA)
     add_definitions(-DCOLLECT_DATA=1)

@@ -74,19 +74,13 @@ public:
   static double Lf;
 
   /**
-   * epsi's reference value
-   */ 
-  static double epsiRef;
-
-  /**
    * epsi's panic threshold
    */ 
   static double epsiPanic;
 
   /**
-   * Cost weights: 0: cte, 1: epsi, 2: v, 3: delta delta, 4: delta, 5: a,
-   * 6: delta a, 7: large deceleration low velocity, 8: negative speed,
-   * 9: out of range psi [-PI, PI], 10: out of range epsi
+   * Cost weights: 0: cte, 1: epsi, 2: v, 3: delta, 4: delta delta, 5: not used,
+   * : a, 7: delta a, 8: large deceleration low velocity, 9: negative speed, 10: out of range epsi
    */ 
   static std::vector<double> weights;
   

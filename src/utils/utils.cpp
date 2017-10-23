@@ -29,19 +29,19 @@ Eigen::VectorXd polyfit(Eigen::VectorXd xvals, Eigen::VectorXd yvals,
 }
 
 double polypsi(Eigen::VectorXd poly, double x, double dir) {
-  double psi = -atan(polyder(poly, x));
-  if (dir < 0) {
-    psi += M_PI;
+  double psi = atan(polyder(poly, x));
+  if (dir < 0) { // adjust the angle if pointing to negative x direction
+    psi = normalizeAngle(psi + M_PI);
   }
-  return normalizeAngle(psi);
+  return psi;
 }
 
 CppAD::AD<double> polypsi(Eigen::VectorXd poly, CppAD::AD<double> x, double dir) {
-  CppAD::AD<double> psi = -CppAD::atan(polyder(poly, x));
-  if (dir < 0) {
-    psi += M_PI;
+  CppAD::AD<double> psi = CppAD::atan(polyder(poly, x));
+  if (dir < 0) {  // adjust the angle if pointing to negative x direction
+    psi = normalizeAngle(psi + M_PI);
   }
-  return normalizeAngle(psi);
+  return psi;
 }
 
 double computeSpeedTarget(double angle, double max) {
@@ -79,6 +79,8 @@ CppAD::AD<double>  computeSpeedTarget(CppAD::AD<double>  angle, double max) {
 double computeYawChange(Eigen::VectorXd poly, double x0, double x1) {
   double psi0 = polypsi(poly, x0, x1 - x0);
   double psi1 = polypsi(poly, x1, x1 - x0);
+  std::cout << "psi1: " << psi1 << ", psi0: " << psi0 << ", x1: " << x1 << ", x0: " << x0 
+                << ", der x1: " << polyder(poly, x1) << ", der x0: " << polyder(poly, x0) << std::endl;
   return psi1 - psi0;
 }
 
@@ -173,18 +175,18 @@ void vehicleToGlobal(double &x, double &y, double px, double py, double psi) {
 // Implements a simple car motion model
 void moveVehicle(double dt, double &x, double &y, double &psi, double &velocity,
   double steering, double acceleration, double length) {
-  double dist = (velocity + acceleration * dt / 2.0) * dt;
+  double dist = velocity * dt;
   // COmpute delta psi
   double delta_psi = steering * dist / length;
   // New psi
-  double new_psi = normalizeAngle(psi + delta_psi);
+  double new_psi = psi + delta_psi;
   // New position
   double px = x + dist * cos(psi);
   double py = y + dist * sin(psi);
   // new velocity
   double v = velocity + acceleration * dt;
   if (velocity > Config::maxSpeed) velocity = Config::maxSpeed;
-  std::cout << "Move: " << x << ", " << y << ", psi:" << psi << ", steering: " << steering
+  std::cout << "Move: " << dt << ", pos: " << x << ", " << y << ", psi:" << psi << ", steering: " << steering
             <<  ", accel: " << acceleration << ", velocity: " << velocity 
             << ", delta psi: " << delta_psi << ", to: " << px << ", " << py << ", psi: " << new_psi 
             << ", velocity: " << v << ", dist: " << dist << std::endl;

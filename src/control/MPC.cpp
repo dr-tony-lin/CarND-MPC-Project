@@ -7,15 +7,16 @@
 #include "../utils/Config.h"
 
 using CppAD::AD;
+using namespace std;
+using Eigen::VectorXd;
 
 class FG_eval {
   double target_velocity;
   double dir;
  public:
   // Fitted polynomial coefficients
-  Eigen::VectorXd coeffs;
-  FG_eval(Eigen::VectorXd &coeffs, double target_velocity, double dir) {
-    this->coeffs = coeffs;
+  VectorXd &coeffs;
+  FG_eval(VectorXd &coeffs, double target_velocity, double dir): coeffs(coeffs) {
     this->target_velocity = target_velocity;
     this->dir = dir;
   }
@@ -26,6 +27,7 @@ class FG_eval {
     double dt = Config::dt;
     vector<double> cost_weights = Config::weights;
     
+    // Starting indices
     size_t x_start = 0;
     size_t y_start = x_start + N;
     size_t psi_start = y_start + N;
@@ -43,37 +45,39 @@ class FG_eval {
     // Penalize large  CTE, epsi, and v error
     for (size_t i = 0; i < N; i++) {
       fg[0] += square(vars[cte_start + i]) * cost_weights[0];
-      if (CppAD::fabs(vars[epsi_start + i]) > Config::epsiRef) {
-        fg[0] += square(vars[epsi_start + i]) * cost_weights[1];
-        if (CppAD::fabs(vars[epsi_start + i]) > Config::epsiPanic) {
+      // Penalize large psi more
+      if (CppAD::fabs(vars[epsi_start + i]) > Config::epsiPanic) { // large epsi
           fg[0] += square(vars[epsi_start + i]) * cost_weights[10];
-        }
+      }
+      else {
+        fg[0] += square(vars[epsi_start + i]) * cost_weights[1];
       }
 
-      fg[0] += square(vars[v_start + i] - computeSpeedTarget(vars[psi_start + i], Config::maxSpeed)) * cost_weights[2];
+      // Penalize speed with the target speed
+      fg[0] += square(vars[v_start + i]-computeSpeedTarget(vars[psi_start + i], Config::maxSpeed))*cost_weights[2];
       if (vars[v_start + i] < 0) { // Penalize negative speed
-        fg[0] += square(vars[v_start + i]) * cost_weights[8];
+        fg[0] += square(vars[v_start + i]) * cost_weights[9];
       }
-    }
-
-    // Penalize large delta and acceleration changes, but lesser of the weight
-    for (size_t i = 0; i < N-2; i++) { 
-      fg[0] += square(vars[delta_start + i + 1] - vars[delta_start + i]) * cost_weights[3];
-      fg[0] += square(vars[a_start + i + 1] - vars[a_start + i]) * cost_weights[6];
     }
 
     // Minimize the use of acceleration actuators.
     for (size_t i = 0; i < N - 1; i++) {
+      fg[0] += square(vars[delta_start + i]) * cost_weights[3];
+
       if (vars[a_start + i] > 0) { // penalize large acceleration, but not deceleration
-        fg[0] += square(vars[a_start + i]) * cost_weights[5];
+        fg[0] += square(vars[a_start + i]) * cost_weights[6];
       }
-      
-      fg[0] += square(vars[delta_start + i]) * cost_weights[4];
 
       // Penalize large deceleration while speed is low 
       if (vars[a_start + i] < 0 && vars[v_start + i] < vars[a_start + i] ) {
-        fg[0] += square(vars[v_start + i] - vars[a_start + i]) * cost_weights[7];
+        fg[0] += square(vars[v_start + i] - vars[a_start + i]) * cost_weights[8];
       }
+    }
+
+    // Penalize large delta and acceleration changes
+    for (size_t i = 0; i < N-2; i++) { 
+      fg[0] += square(vars[delta_start + i + 1] - vars[delta_start + i]) * cost_weights[4];
+      fg[0] += square(vars[a_start + i + 1] - vars[a_start + i]) * cost_weights[7];
     }
 
     fg[1 + x_start] = vars[x_start];
@@ -114,8 +118,8 @@ class FG_eval {
       }
       fg[1 + v_start + i] = v1 - v;
       // we want the errors to be close to 0
-      fg[1 + cte_start + i] = cte1 - (polyeval(coeffs, x0) - y0 + CppAD::sin(epsi0) * vdt);
-      fg[1 + epsi_start + i] = epsi1 - (psi - polypsi(coeffs, x0, dir));
+      fg[1 + cte_start + i] = cte1 - ((polyeval(coeffs, x0) - y0) + CppAD::sin(epsi0) * vdt);
+      fg[1 + epsi_start + i] = epsi1 - (psi - polypsi(coeffs, x0, 1.0));
     }
   }
 };
@@ -146,11 +150,12 @@ MPC::MPC() {
 }
 MPC::~MPC() {}
 
-vector<double> MPC::Solve(Eigen::VectorXd &state, Eigen::VectorXd &coeffs, double target_velocity,
-                    double dir, std::vector<double> *x_trajectory, std::vector<double> *y_trajectory) {
+vector<double> MPC::Solve(VectorXd &state, double target_velocity, double dir, vector<double> *x_trajectory,
+  vector<double> *y_trajectory) {
   typedef CPPAD_TESTVECTOR(double) Dvector;
   size_t N = Config::N;
 
+  // Starting indices
   size_t x_start = 0;
   size_t y_start = x_start + N;
   size_t psi_start = y_start + N;
@@ -246,7 +251,7 @@ vector<double> MPC::Solve(Eigen::VectorXd &state, Eigen::VectorXd &coeffs, doubl
   constraints_upperbound[epsi_start] = state[5];
 
   // object that computes objective and constraints
-  FG_eval fg_eval(coeffs, target_velocity, dir);
+  FG_eval fg_eval(poly, target_velocity, dir);
 
   // place to return solution
   CppAD::ipopt::solve_result<Dvector> solution;
@@ -260,7 +265,11 @@ vector<double> MPC::Solve(Eigen::VectorXd &state, Eigen::VectorXd &coeffs, doubl
   bool ok = solution.status == CppAD::ipopt::solve_result<Dvector>::success;
 
   if (!ok) {
+#ifdef EXIT_ON_IPOPT_FAILURE
     throw std::string("Ipopt failed with ") + std::to_string(solution.status);
+#else
+    std::cout << "Ipopt failed with " + std::to_string(solution.status) << std::endl;
+#endif
   }
 
   // Update x, y trajectory if provided
@@ -271,16 +280,86 @@ vector<double> MPC::Solve(Eigen::VectorXd &state, Eigen::VectorXd &coeffs, doubl
     }
   }
 
+  #ifdef VERBOSE_OUT
   std::cout << "Solution: " << solution.x << std::endl;
+#endif
 
   // Return the first actuator values. The variables can be accessed with
   // `solution.x[i]`.
   // Ther first element of each state varaible is the initial state value, therefore, the first actuator
   // values will be their second elements, delta and a don't have initial state value, and the first
-  // actuator values will be their first element.
-  // Also return the cost as the last element of the result
+  // actuator values will be their first element. Also return the cost as the last element of the result
   return {solution.x[x_start+1], solution.x[y_start+1], solution.x[psi_start+1], solution.x[v_start+1],
           solution.x[cte_start+1], solution.x[epsi_start+1], solution.x[delta_start], solution.x[a_start],
-          solution.obj_value, solution.x[delta_start+1], solution.x[delta_start + 2],
-          solution.x[a_start+1], solution.x[a_start + 2]};
+          solution.obj_value};
 }
+
+vector<double> MPC::run(double px, double py, double psi, double v, double steer, vector<double> &ptsx,
+    vector<double> &ptsy,std::vector<double> *x_trajectory, std::vector<double> *y_trajectory) {
+  globalToVehicle(ptsx, ptsy, px, py, psi);
+  // Compute the polynomial coefficients
+  VectorXd xVals(ptsx.size());
+  VectorXd yVals(ptsx.size());
+  for (int i = 0; i < ptsx.size(); i++) {
+    xVals[i] = ptsx[i];
+    yVals[i] = ptsy[i];
+  }
+
+  double fiterr = 0;
+  int order = 2;
+  do { // Compute the polynomial coefficients to an order that has small fitting error
+    poly = polyfit(xVals, yVals, order++);
+    for (int i = 0; i < ptsx.size(); i++) {
+      fiterr = square(ptsy[i] - polyeval(poly, ptsx[i]));
+    }
+  } while (fiterr > 1 && order < Config::maxPolyOrder);
+#ifdef VERBOSE_OUT
+  cout << "Polynominal: " << poly << endl;
+#endif
+
+  // Calculate the CTE, origin is now 0, 0
+  double cte = polyeval(poly, 0);
+  // Calculate the psi error, origin and psi are now all 0
+  double epsi = -polypsi(poly, 0, 1.0);
+
+  // Compute the maximum speed according to the total psi change on the current center line curve
+  double max_yaw_change = computeYawChange(poly, 0, ptsx[ptsx.size() - 1]);
+  double max_speed = computeYawChangeSpeedLimit(max_yaw_change, Config::maxSpeed);
+  // Compute the speed target according to steering
+  double target_speed = computeSpeedTarget(steer, max_speed);
+  double steer_value;
+
+  // Set the yaw constraints to MPC
+  if (max_yaw_change < 0) {
+    Config::yawLow = max_yaw_change;
+    Config::yawHigh = 0.1;
+  }
+  else {
+    Config::yawLow = -0.1;
+    Config::yawHigh = max_yaw_change;
+  }
+
+#ifdef VERBOSE_OUT
+  cout << "Psi: " << psi<< ", ePsi: " << epsi << ", cte: " << cte << ", fit err: " << fiterr 
+  << ", Yaw range: " << Config::yawLow << ", " << Config::yawHigh << ", order: " << order << endl;
+#endif
+
+  // Set the initial state, origin and psi are all 0
+  VectorXd state(6);
+  state << 0, 0, 0, v, cte, epsi;
+
+  // Solve MPC
+  auto result = Solve(state, target_speed, ptsx[1] - ptsx[0], x_trajectory, y_trajectory);
+  double steer_angle = result[6];
+  double accel = std::min(result[7], target_speed - v);
+  steer_value = clamp(steer_angle / Config::maxSteering, -1.0, 1.0);
+#ifdef VERBOSE_OUT
+  cout << "Steering: " << steer_angle << ", " << result[9] << ", " << result[10] 
+  << ", accel: " << result[7] << ", speed: " << result[3] << ", steer: " << steer_value
+  << ", target speed: " << target_speed << ", CTE: " << result[4] << ", epsi: " << result[5] 
+  << ", cost: " << result[8] << ", max speed: " << max_speed << endl;
+#endif
+
+  return {result[0], result[1], result[2], result[3], steer_value, accel, result[4], result[5]};
+}
+

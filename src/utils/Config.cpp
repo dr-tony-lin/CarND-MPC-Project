@@ -14,7 +14,6 @@ double Config::maxAcceleration = MpH2MpS(8);
 double Config::maxDeceleration = MpH2MpS(-20);
 double Config::maxSpeed = MpH2MpS(100);
 double Config::Lf = 2.67;
-double Config::epsiRef = 0.1;
 double Config::epsiPanic = 1;
 std::vector<double> Config::weights = {100, 100, 1, 1, 1, 5000, 1, 1000};
 std::vector<double> Config::steers = {0.1, 0.2, 0.3};
@@ -31,6 +30,8 @@ void Config::load(std::string fileName) {
   nlohmann::json js;
   js << in;
 
+  double speedScale;
+
   N = js["N"];
   dt = js["dt"];
   maxAcceleration = js["max acceleration"];
@@ -40,28 +41,37 @@ void Config::load(std::string fileName) {
   maxSteering = deg2rad(js["max steering"]);
   maxSpeed = js["max speed"];
   maxSpeed = MpH2MpS(maxSpeed);
+  speedScale = maxSpeed/MpH2MpS(100.0);
   latency = js["latency"];
-  lookahead = js["look ahead"];
-  lookahead /= 1000.0;
+  lookahead = latency * 1.0E-3;
   maxPolyOrder= js["max poly order"];
   ipoptTimeout = js["ipopt timeout"];
   Lf = js["Lf"];
-  epsiRef = js["epsi ref"];
-  epsiPanic = js["epsi panic"];
+  epsiPanic = js["epsi penalize more"];
   std::vector<double> w = js["weights"];
   weights = w;
   std::vector<double> st = js["steers"];
   steers = st;
   std::vector<double> sts = js["steer speeds"];
   for (int i = 0; i < sts.size(); i++) {
-    sts[i] = MpH2MpS(sts[i]);
+    if (speedScale <= 1) {
+      sts[i] = std::fmin(MpH2MpS(sts[i]), maxSpeed);
+    }
+    else {
+      sts[i] = MpH2MpS(sts[i]) * speedScale;
+    }
   }
   steerSpeeds = sts;
   std::vector<double> yc = js["yaw change"];
   yawChanges = yc;
   std::vector<double> ycs = js["yaw change speed"];
   for (int i = 0; i < ycs.size(); i++) {
-    ycs[i] = MpH2MpS(ycs[i]);
+    if (speedScale <= 1) {
+      ycs[i] = std::fmin(MpH2MpS(ycs[i]), maxSpeed);
+    }
+    else {
+      ycs[i] = MpH2MpS(ycs[i]) * speedScale;
+    }
   }
   yawChangeSpeeds = ycs;
 }
