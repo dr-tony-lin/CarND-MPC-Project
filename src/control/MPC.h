@@ -27,12 +27,12 @@ class MPC {
    * Return the first actuations
    * @param state the initial state
    * @param target_velocity the target velocity
-   * @param dir moving direction
    * @param x_trajectory control trjectory for x axis, default NULL
    * @param y_trajectory control trjectory for y axis, default NULL
+   * @param dir moving direction, should be any positive number
    */ 
-  vector<double> Solve(VectorXd &state, double target_velocity, double dir, vector<double> *x_trajectory=NULL,
-    vector<double> *y_trajectory=NULL);
+  vector<double> Solve(VectorXd &state, double target_velocity, vector<double> *x_trajectory=NULL,
+    vector<double> *y_trajectory=NULL, double dir=1);
   
   /**
    * Run the controller

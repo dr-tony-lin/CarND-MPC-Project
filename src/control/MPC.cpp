@@ -11,12 +11,29 @@ using namespace std;
 using Eigen::VectorXd;
 
 class FG_eval {
+  /**
+   * The target velocity to reach or maintain
+   */ 
   double target_velocity;
+
+  /**
+   * Moving direction, should be positive
+   */ 
   double dir;
- public:
-  // Fitted polynomial coefficients
+
+  /**
+   * Fitted polynomial coefficients
+   */ 
   VectorXd &coeffs;
-  FG_eval(VectorXd &coeffs, double target_velocity, double dir): coeffs(coeffs) {
+
+ public:
+  /**
+   * Constructor
+   * @param coeffs the fitted polynomial coefficients
+   * @param target_velocity the target velocity to reach or maintain
+   * @param dir the moving direction, should be any positive number
+   */ 
+  FG_eval(VectorXd &coeffs, double target_velocity, double dir=1): coeffs(coeffs) {
     this->target_velocity = target_velocity;
     this->dir = dir;
   }
@@ -150,8 +167,8 @@ MPC::MPC() {
 }
 MPC::~MPC() {}
 
-vector<double> MPC::Solve(VectorXd &state, double target_velocity, double dir, vector<double> *x_trajectory,
-  vector<double> *y_trajectory) {
+vector<double> MPC::Solve(VectorXd &state, double target_velocity, vector<double> *x_trajectory,
+  vector<double> *y_trajectory, double dir) {
   typedef CPPAD_TESTVECTOR(double) Dvector;
   size_t N = Config::N;
 
@@ -349,7 +366,7 @@ vector<double> MPC::run(double px, double py, double psi, double v, double steer
   state << 0, 0, 0, v, cte, epsi;
 
   // Solve MPC
-  auto result = Solve(state, target_speed, ptsx[1] - ptsx[0], x_trajectory, y_trajectory);
+  auto result = Solve(state, target_speed, x_trajectory, y_trajectory);
   double steer_angle = result[6];
   double accel = std::min(result[7], target_speed - v);
   steer_value = clamp(steer_angle / Config::maxSteering, -1.0, 1.0);

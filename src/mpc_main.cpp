@@ -101,7 +101,7 @@ int main() {
           static double last_psi = 0;
           static double last_v = 0;
           // Current throttle
-          double throttle = j[1]["throttle"]; // the trouble is anything below 0 will be returned as 0, is this a bug?
+          double throttle = j[1]["throttle"]; // Simulator will return 0 if the value is negative, may be a bug
           
           if (!is_first) {
             cerr << dt << "," << psi << "," << v << "," << throttle << "," << throttle_value
@@ -114,9 +114,12 @@ int main() {
           last_v = v;
 #endif
           // Simulate car move to compensate the latency, the latency is the average MPC time + actuator latency
+          // The real acceleration depends on the throttle, the current speed, the vehicle and the road
+          // Here we simply use the throttle value from the previous MPC times by a factor, here 4 is picked,
+          // But it does not matter much.
           if (Config::latency) {
-            moveVehicle(Config::lookahead + latencyReducer.mean<double>(), px, py, psi, v, steer, throttle_value,
-                          Config::Lf);
+            moveVehicle(Config::lookahead + latencyReducer.mean<double>(), px, py, psi, v, steer,
+                        throttle_value * 4, Config::Lf);
           }
 
 #ifdef PLOT_TRAJECTORY
@@ -195,10 +198,10 @@ int main() {
   h.onConnection([&h](uWS::WebSocket<uWS::SERVER> ws, uWS::HttpRequest req) {
     cout << "Connected!!!" << endl;
     Config::load("../config.json");
-
+    
+    latencyReducer.clear();
 #if defined(COLLECT_DATA) || defined(VERBOSE_OUT)
     prev_time = high_resolution_clock::now();
-    latencyReducer.clear();
 #endif
   });
 

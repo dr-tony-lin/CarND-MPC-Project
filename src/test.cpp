@@ -24,6 +24,16 @@ int main() {
   // vector<double> ptsx = {-164.3164,-169.3365,-175.4917,-176.9617,-176.8864,-175.0817};
   // vector<double> ptsy = {-30.18062,-42.84062,-66.52898,-76.85062,-90.64063,-100.3206};
 
+  // double x = -166.0726;
+  // double y = -29.59644;
+  // double psi = 4.088;
+  // double v = 30.62756;
+
+  // double x = -144.7913;
+  // double y = 3.767814;
+  // double psi = 0.03732295;
+  // double v = 10.32361;
+
   // vector<double> ptsx = {-61.09,-78.29172,-93.05002,-107.7717,-123.3917,-134.97};
   // vector<double> ptsy = {92.88499,78.73102,65.34102,50.57938,33.37102,18.404};
   // double x = -61.97283;
@@ -31,25 +41,12 @@ int main() {
   // double psi = 3.857562;
   // double v = 33.06046;
 
-  // vector<double> ptsx = {-134.97,-145.1165,-158.3417,-164.3164,-169.3365,-175.4917};
-  // vector<double> ptsy = {18.404,4.339378,-17.42898,-30.18062,-42.84062,-66.52898};
-
   vector<double> ptsx = {-145.1165,-158.3417,-164.3164,-169.3365,-175.4917,-176.9617};
   vector<double> ptsy = {4.339378,-17.42898,-30.18062,-42.84062,-66.52898,-76.85062};
   double x = -146.7283;
   double y = 1.660802;
   double psi = 4.125825;
   double v = 26.6806;
-  
-  // double x = -144.7913;
-  // double y = 3.767814;
-  // double psi = 0.03732295;
-  // double v = 10.32361;
-  
-  // double x = -166.0726;
-  // double y = -29.59644;
-  // double psi = 4.088;
-  // double v = 30.62756;
 
   std::vector<double> x_vals;
   std::vector<double> y_vals;
@@ -79,7 +76,7 @@ int main() {
   for (size_t i = 0; i < iters; i++) {
     std::cout << "Iteration " << i << std::endl;
     try {
-      auto vars = mpc.Solve(state, 40, ptsx[1] - ptsx[0]);
+      auto vars = mpc.Solve(state, 40);
       
       x_vals.push_back(vars[0]);
       y_vals.push_back(vars[1]);
