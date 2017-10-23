@@ -153,6 +153,11 @@ int main() {
           msgJson["mpc_y"] = mpc_y_vals;
           msgJson["next_x"] = ptsx;
           msgJson["next_y"] = ptsy;
+#else
+          msgJson["mpc_x"] = NULL;
+          msgJson["mpc_y"] = NULL;
+          msgJson["next_x"] = NULL;
+          msgJson["next_y"] = NULL;
 #endif
           auto msg = "42[\"steer\"," + msgJson.dump() + "]";
 #ifdef VERBOSE_OUT          
