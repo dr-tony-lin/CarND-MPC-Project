@@ -83,6 +83,53 @@ This class implements MPC controller. The **run()** method is used to run the MP
 4. Compute the target velocity, and upper and lower bounds of yaw according to how much the center line's angle changes between the current vehicle location and the last point of the line
 4. Invoke the **solve()** method that uses [IPOPT](https://projects.coin-or.org/Ipopt) nonlinear optimization.
 
+### The state
+The IPOPT state is composed of x, y, psi, v, CTE, and epsi. The initial state is given by 0, 0, 0, current velocity, initial CTE, and initial epsi.
+
+#### Initial CTE
+The initial CTS is the y coordinate of the center line at 0:
+
+    polyeval(poly, 0)
+
+Where poly is the fitted polynomial of the center line
+
+#### Initial epsi
+The initial epsi is the negative of the derivative of the fitted polynomial at 0 along the positive direction:
+    -polypsi(poly, 0, 1.0)
+
+### The Actuators
+Two actuators are of interested:
+
+* delat: the steering angle
+* a: the acceleration
+
+### IPOPT optimization
+The IPOPT optimization's cost constraints are computed as follows:
+
+**vdt** = *v0 * dt*
+
+**psi** = *psi0 + delta0 * vdt / Config::Lf*
+
+**v** = *v0 + a0 * dt*
+
+**constraint of x** = *x1 - (x0 + cos(psi0) * vdt)*
+
+**constraint of y** = *y1 - (y0 + sin(psi0) * vdt)*
+
+**constraint of psi** = *psi1 - psi*
+
+**constraint of v** = *v1 - v*
+
+**constraint of CTE** = *cte1 - ((polyeval(coeffs, x0) - y0) + sin(epsi0) * vdt)*
+
+**constraint of epsi** = *epsi1 - (psi - polypsi(coeffs, x0, 1.0))*
+
+Where:
+
+* x0, x1, y0, y1, psi0, psi1, v0, v1, cte0, cte1, psi0, and psi1 are the x, y, psi, v, CTE, and epsi at previous and current time respectively.
+* delta0, and a0 are the current actuator values
+* coeffs is the fitting polynomial coefficients of the center line
+
 ## Config class
 The Config class reads the hyper parameters from the config.json file:
 * N: the number of steps, json field "N"
@@ -130,6 +177,20 @@ Each MPC iteration includes the following steps:
 In order to simulate the vehicle movement during the latency, we need to know the current vehicle acceleration in addition to vehicle location, orientation, and steering angle provided by the simulator. Unfortunately the current vehicle acceleration cannot be obtained from throttle easily as it depends on the vehicle and road.
 
 The implementation uses a very simple logic - by multiplying the current throttle with a constant, which is 4 at present. Emprically, this seems fine. Also, I have tried other values between 1 to 10, and did not observe big differences.
+
+The moving model is:
+
+**distance** = *velocity * dt*
+
+**delta_psi** = *steering * dist / Config::Lf*
+
+**psi** = *psi + delta_psi*
+
+**x** = *x + dist * cos(psi)*
+
+**y** = *y + dist * sin(psi)*
+
+**v** = *v + acceleration * dt*
 
 ## Determine vehicle speed
 Since the center line curve is available, we could determine the maximal speed like a real driver who will accelerate or decelerate according to much turn that needs to be made. This is implemented as follow:

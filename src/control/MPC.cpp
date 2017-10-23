@@ -130,9 +130,6 @@ class FG_eval {
       fg[1 + y_start + i] = y1 - (y0 + CppAD::sin(psi0) * vdt);
       fg[1 + psi_start + i] = psi1 - psi;
       AD<double> v = v0 + a0 * dt;
-      if (v < 0) { // no negative speed!
-        v = 0;
-      }
       fg[1 + v_start + i] = v1 - v;
       // we want the errors to be close to 0
       fg[1 + cte_start + i] = cte1 - ((polyeval(coeffs, x0) - y0) + CppAD::sin(epsi0) * vdt);

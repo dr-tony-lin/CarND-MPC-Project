@@ -99,13 +99,6 @@ double computeYawChangeSpeedLimit(double yawChange, double max) {
   return std::fmin(Config::yawChangeSpeeds.back(), max);
 }
 
-/**
- * Simple logic to compute throttle from acceleration.
- * @param accel the acceleration to reach (meter/sec/sec)
- * @param target the target speed (meter/sec)
- * @param max_accel the maximal acceleration (meter/sec/sec)
- * @param max_decel the maximal deceleration (meter/sec/sec)
- */ 
 double computeThrottle(double accel, double target, double max_accel, double max_decel) {
   // the throttle to keep if no accel, divide by Config::maxSpeed is a rough estimate of target speed,
   // and throttle to keep for the speed
@@ -172,7 +165,6 @@ void vehicleToGlobal(double &x, double &y, double px, double py, double psi) {
   y = gy;
 }
 
-// Implements a simple car motion model
 void moveVehicle(double dt, double &x, double &y, double &psi, double &velocity,
   double steering, double acceleration, double length) {
   double dist = velocity * dt;
