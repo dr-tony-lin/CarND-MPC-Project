@@ -167,7 +167,7 @@ MPC::MPC() {
 }
 MPC::~MPC() {}
 
-vector<double> MPC::Solve(VectorXd &state, double target_velocity, vector<double> *x_trajectory,
+vector<double> MPC::solve(VectorXd &state, double target_velocity, vector<double> *x_trajectory,
   vector<double> *y_trajectory, double dir) {
   typedef CPPAD_TESTVECTOR(double) Dvector;
   size_t N = Config::N;
@@ -366,7 +366,7 @@ vector<double> MPC::run(double px, double py, double psi, double v, double steer
   state << 0, 0, 0, v, cte, epsi;
 
   // Solve MPC
-  auto result = Solve(state, target_speed, x_trajectory, y_trajectory);
+  auto result = solve(state, target_speed, x_trajectory, y_trajectory);
   double steer_angle = result[6];
   double accel = std::min(result[7], target_speed - v);
   steer_value = clamp(steer_angle / Config::maxSteering, -1.0, 1.0);

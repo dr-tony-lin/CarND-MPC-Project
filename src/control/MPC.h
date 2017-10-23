@@ -31,7 +31,7 @@ class MPC {
    * @param y_trajectory control trjectory for y axis, default NULL
    * @param dir moving direction, should be any positive number
    */ 
-  vector<double> Solve(VectorXd &state, double target_velocity, vector<double> *x_trajectory=NULL,
+  vector<double> solve(VectorXd &state, double target_velocity, vector<double> *x_trajectory=NULL,
     vector<double> *y_trajectory=NULL, double dir=1);
   
   /**

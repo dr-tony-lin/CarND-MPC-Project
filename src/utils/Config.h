@@ -39,7 +39,7 @@ public:
   static int maxPolyOrder;
 
   /** 
-   * Maximal change in steering
+   * Maximal steering angle
    */ 
   static double maxSteering;
 

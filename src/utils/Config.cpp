@@ -47,7 +47,7 @@ void Config::load(std::string fileName) {
   maxPolyOrder= js["max poly order"];
   ipoptTimeout = js["ipopt timeout"];
   Lf = js["Lf"];
-  epsiPanic = js["epsi penalize more"];
+  epsiPanic = js["epsi panic"];
   std::vector<double> w = js["weights"];
   weights = w;
   std::vector<double> st = js["steers"];
@@ -62,9 +62,9 @@ void Config::load(std::string fileName) {
     }
   }
   steerSpeeds = sts;
-  std::vector<double> yc = js["yaw change"];
+  std::vector<double> yc = js["yaw changes"];
   yawChanges = yc;
-  std::vector<double> ycs = js["yaw change speed"];
+  std::vector<double> ycs = js["yaw change speeds"];
   for (int i = 0; i < ycs.size(); i++) {
     if (speedScale <= 1) {
       ycs[i] = std::fmin(MpH2MpS(ycs[i]), maxSpeed);

@@ -76,7 +76,7 @@ int main() {
   for (size_t i = 0; i < iters; i++) {
     std::cout << "Iteration " << i << std::endl;
     try {
-      auto vars = mpc.Solve(state, 40);
+      auto vars = mpc.solve(state, 40);
       
       x_vals.push_back(vars[0]);
       y_vals.push_back(vars[1]);
@@ -111,21 +111,20 @@ int main() {
   plt::title("CTE");
   plt::plot(cte_vals);
   plt::subplot(5, 1, 2);
+  plt::title("ePsi");
+  plt::plot(epsi_vals);
+  plt::subplot(5, 1, 3);
   plt::title("Delta (Radians)");
   plt::plot(delta_vals);
-  plt::subplot(5, 1, 3);
+  plt::subplot(5, 1, 4);
   plt::title("Velocity");
   plt::plot(v_vals);
 
-  plt::subplot(5, 1, 4);
+  plt::subplot(5, 1, 5);
   plt::title("Route");
 
   plt::plot(std::vector<double>(ptsx.data(), ptsx.data() + ptsx.size()),
             std::vector<double>(ptsy.data(), ptsy.data() + ptsy.size()), "r");
   plt::plot(x_vals, y_vals);
-  
-  plt::subplot(5, 1, 5);
-  plt::title("Psi");
-  plt::plot(psi_vals);
   plt::show();
 }
