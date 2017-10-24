@@ -220,10 +220,7 @@ The total MPC cost is summed from weighted squares of:
 
 The experiments showed that tuning weights for CTE, epsi, steering angle, and change in steering angle is important for the vehicle's overall stability.
 
-
-## Results
-
-### Hyper parameter tuning
+## Hyper parameter tuning
 The results of tunning the hyper parameters show the following:
 
 * N: between 20, to 30
@@ -232,6 +229,19 @@ The results of tunning the hyper parameters show the following:
 * epsi weight: around 100 for epsi less than the panic level, otherwise 5000
 * delta weight: 400 to 800
 * delta delta weight: 1000
+
+### N and dt
+The N, the number of times steps, and dt, the duration of each time step, parameters determine the event horizon of the MPC in that:
+
+    event horizon = N * dt
+
+N affects the event horizon and the IPOPT time, both are proporotional to N. Chosing a large N will require more processing time, and the result may not improve. Experiements have shown that when event horizon is above 1.5 seconds, instability starts to increase. In some case, it may take IPOPT a lot longer to converge (can be over few hundred millie seconds), and fails.
+
+The values of dt affect the event horizon, and the precision of MPC, the smaller the value, the more accurate result may be obtained, but at the cost of reduced event horizon.
+
+Experiments have found setting N to be between 10 and 30, and dt to be between 0.1 and 0.05 for 1 second of event horizon seem good choices.
+
+## Results
 
 The following videos shows the simulation results with different steps, and CTE weights:
 
@@ -244,17 +254,28 @@ The following videos shows the simulation results with different steps, and CTE 
 
 A video without trajectory for N = 20, and CTE = 1 is [shown here](./MPC.mp4)
 
-The following charts show MPC iterations in two locations in the map:
+The following charts show MPC iterations for different N and DT:
 
-[MPC1](MPC1.png)
+|                 |       Graph              |
+|:----------------|:------------------------:|
+| N: 10, dt: 0.1  |[Graph 1](10-01-2.png)      |
+| N: 20, dt: 0.1  |[Graph 2](20-01-2.png)      |
+| N: 30, dt: 0.1  |[Graph 3](30-01-2.png)      |
+| N: 10, dt: 0.05 |[Graph 4](10-005-2.png)     |
+| N: 20, dt: 0.05 |[Graph 5](20-005-2.png)     |
+| N: 30, dt: 0.05 |[Graph 6](30-005-2.png)     |
+| N: 40, dt: 0.05 |[Graph 7](40-005-2.png)     |
+| N: 50, dt: 0.02 |[Graph 8](50-002.png)       |
 
-[MPC2](MPC3.png)
+The graphs show that the irregularity increases as N increase roughly after passing 1.5 second event horizon that result in large CTE spike at the end like [Graph 6](30-005-2.png) and [Graph 7](40-005-2.png). When the event horizon is too small, large errors will also occur, like [Graph 4](10-005-2.png). 
 
-They show convergence after 20 or 25 steps. This is probably correlated to why optimal results are obtained when N is between 20 to 25.
+Also comparing dt = 0.1 and dt=0.05, the former has large CTE errors at the end e.g. [Graph 1](10-01-2.png), [Graph 2](20-01-2.png). This may suggest that smaller dt is preferable given a event horizon if the computing resource permits, [Graph 8](50-002.png) with dt = 0.02 has a much smoother and smaller CTE at the end may be another prove. 
+
+Unfortunately, setting dt = 0.02 will require N = 50 for 1 second of event horizon, and may not always be feasible.
 
 ### Discussion
 During the tunning, I have observed the followings:
-1. CTE weights outside [1, 2] reduces the vehicle stability
+1. CTE weights outside [1, 2] may reduce the vehicle's stability
 2. High CTE weight may cause MPC overshot, and subsequent correction will cause the vehicle to oscillate
 3. Low CTE will cause the MPC undershot, and the vehicle may run off the road. Also subsequent correction will cause the vehicle to oscillate
 

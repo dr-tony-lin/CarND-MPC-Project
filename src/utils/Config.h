@@ -9,6 +9,52 @@
 struct Config {
 public:
   /**
+   * Index of for CTE in the cost weight array
+   */ 
+  static const int WEIGHT_CTE = 0;
+
+  /**
+   * Index for epsi in the cost weight array
+   */ 
+  static const int WEIGHT_EPSI = 1;
+
+  /**
+   * Index for velocity in the cost weight array
+   */ 
+  static const int WEIGHT_V = 2;
+
+  /**
+   * Index for delta in the cost weight array
+   */ 
+  static const int WEIGHT_DELTA = 3;
+
+  /**
+   * Index for delta change in the cost weight array
+   */ 
+  static const int WEIGHT_DDELTA = 4;
+
+  /**
+   * Index for acceleration in the cost weight array
+   */ 
+  static const int WEIGHT_A = 6;
+  /**
+   * Index for acceleration change in the cost weight array
+   */ 
+  static const int WEIGHT_DA = 7;
+  /**
+   * Index for large deceleration at low velocity in the cost weight array
+   */ 
+  static const int WEIGHT_DECEL_LOW_V = 8;
+  /**
+   * Index for negative velocity in the cost weight array
+   */ 
+  static const int WEIGHT_NEG_V = 9;
+  /**
+   * Index for large epsi in the cost weight array
+   */ 
+  static const int WEIGHT_LARGE_EPSI = 10;
+
+  /**
    * The timestep length
    */
   static size_t N;
@@ -80,7 +126,7 @@ public:
 
   /**
    * Cost weights: 0: cte, 1: epsi, 2: v, 3: delta, 4: delta delta, 5: not used,
-   * : a, 7: delta a, 8: large deceleration low velocity, 9: negative speed, 10: out of range epsi
+   * 6: a, 7: delta a, 8: large deceleration low velocity, 9: negative speed, 10: out of range epsi
    */ 
   static std::vector<double> weights;
   

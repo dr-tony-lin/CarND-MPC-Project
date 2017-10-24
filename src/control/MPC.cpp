@@ -61,40 +61,41 @@ class FG_eval {
 
     // Penalize large  CTE, epsi, and v error
     for (size_t i = 0; i < N; i++) {
-      fg[0] += square(vars[cte_start + i]) * cost_weights[0];
+      fg[0] += square(vars[cte_start + i]) * cost_weights[Config::WEIGHT_CTE];
       // Penalize large psi more
       if (CppAD::fabs(vars[epsi_start + i]) > Config::epsiPanic) { // large epsi
-          fg[0] += square(vars[epsi_start + i]) * cost_weights[10];
+          fg[0] += square(vars[epsi_start + i]) * cost_weights[Config::WEIGHT_LARGE_EPSI];
       }
       else {
-        fg[0] += square(vars[epsi_start + i]) * cost_weights[1];
+        fg[0] += square(vars[epsi_start + i]) * cost_weights[Config::WEIGHT_EPSI];
       }
 
       // Penalize speed with the target speed
-      fg[0] += square(vars[v_start + i]-computeSpeedTarget(vars[psi_start + i], Config::maxSpeed))*cost_weights[2];
+      fg[0] += square(vars[v_start + i]-computeSpeedTarget(vars[psi_start + i], Config::maxSpeed))
+                  * cost_weights[Config::WEIGHT_V];
       if (vars[v_start + i] < 0) { // Penalize negative speed
-        fg[0] += square(vars[v_start + i]) * cost_weights[9];
+        fg[0] += square(vars[v_start + i]) * cost_weights[Config::WEIGHT_NEG_V];
       }
     }
 
     // Minimize the use of acceleration actuators.
     for (size_t i = 0; i < N - 1; i++) {
-      fg[0] += square(vars[delta_start + i]) * cost_weights[3];
+      fg[0] += square(vars[delta_start + i]) * cost_weights[Config::WEIGHT_DELTA];
 
       if (vars[a_start + i] > 0) { // penalize large acceleration, but not deceleration
-        fg[0] += square(vars[a_start + i]) * cost_weights[6];
+        fg[0] += square(vars[a_start + i]) * cost_weights[Config::WEIGHT_A];
       }
 
       // Penalize large deceleration while speed is low 
       if (vars[a_start + i] < 0 && vars[v_start + i] < vars[a_start + i] ) {
-        fg[0] += square(vars[v_start + i] - vars[a_start + i]) * cost_weights[8];
+        fg[0] += square(vars[v_start + i] - vars[a_start + i]) * cost_weights[Config::WEIGHT_DECEL_LOW_V];
       }
     }
 
     // Penalize large delta and acceleration changes
     for (size_t i = 0; i < N-2; i++) { 
-      fg[0] += square(vars[delta_start + i + 1] - vars[delta_start + i]) * cost_weights[4];
-      fg[0] += square(vars[a_start + i + 1] - vars[a_start + i]) * cost_weights[7];
+      fg[0] += square(vars[delta_start + i + 1] - vars[delta_start + i]) * cost_weights[Config::WEIGHT_DDELTA];
+      fg[0] += square(vars[a_start + i + 1] - vars[a_start + i]) * cost_weights[Config::WEIGHT_DA];
     }
 
     fg[1 + x_start] = vars[x_start];

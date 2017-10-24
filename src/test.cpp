@@ -10,7 +10,7 @@ namespace plt = matplotlibcpp;
 
 int main() {
   MPC mpc;
-  int iters = 40;
+  int iters = 100;
 
   Config::load("../config.json");
 
