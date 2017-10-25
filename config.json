@@ -6,7 +6,7 @@
   "max steering": 25,
   "max acceleration": 10,
   "max deceleration": -20,
-  "max speed": 120,
+  "max speed": 140,
   "Lf": 2.67,
   "epsi panic": 0.15,
   "max poly order": 5,
