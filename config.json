@@ -6,13 +6,13 @@
   "max steering": 25,
   "max acceleration": 10,
   "max deceleration": -20,
-  "max speed": 140,
+  "max speed": 138,
   "Lf": 2.67,
-  "epsi panic": 0.15,
+  "epsi panic": 0.1,
   "max poly order": 5,
-  "weights": [1, 100, 5, 600, 1000, 0, 5, 100, 5000, 5000, 5000, 5000],
+  "weights": [1, 90, 5, 600, 1000, 0, 5, 100, 5000, 5000, 5000, 5000],
   "steers":       [0.01, 0.05, 0.08, 0.1, 0.13, 0.15, 0.2, 0.25, 0.3],
-  "steer speeds": [100,    95,   80,  75,   65,   45,   35,  30, 25],
+  "steer speeds": [100,    90,   80,  75,   65,   45,   35,  30, 25],
   "yaw changes":       [0.5, 0.9, 1.2, 1.6, 1.8, 2.0, 2.2],
-  "yaw change speeds": [100,  80,  65,  60,  50,  40,  25, 20]
+  "yaw change speeds": [100,  80,  65,  60,  55,  40,  30, 25]
 }

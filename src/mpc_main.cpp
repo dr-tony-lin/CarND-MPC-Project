@@ -36,6 +36,8 @@ string hasData(string s) {
 
 #if defined(COLLECT_DATA) || defined(VERBOSE_OUT)
 static high_resolution_clock::time_point prev_time = high_resolution_clock::now();
+#endif
+#if defined(COLLECT_DATA)
 static bool is_first = true;
 #endif
 
