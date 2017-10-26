@@ -49,21 +49,10 @@ public:
    * Index for negative velocity in the cost weight array
    */ 
   static const int WEIGHT_NEG_V = 9;
-
   /**
    * Index for large epsi in the cost weight array
    */ 
   static const int WEIGHT_LARGE_EPSI = 10;
-
-  /**
-   * Index for CTE increase in the cost weight array
-   */ 
-  static const int WEIGHT_CTE_INC = 11;
-
-  /**
-   * Index for epsi increase in the cost weight array
-   */ 
-  static const int WEIGHT_EPSI_INC = 12;
 
   /**
    * The timestep length

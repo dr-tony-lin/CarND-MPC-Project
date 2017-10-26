@@ -76,16 +76,6 @@ class FG_eval {
       if (vars[v_start + i] < 0) { // Penalize negative speed
         fg[0] += square(vars[v_start + i]) * cost_weights[Config::WEIGHT_NEG_V];
       }
-
-      AD<double> incr = vars[cte_start + i + 1] - vars[cte_start + i];
-      if (incr > 0) {
-        fg[0] += square(incr) * cost_weights[Config::WEIGHT_CTE_INC];
-      }
-      
-      incr = vars[epsi_start + i + 1] - vars[epsi_start + i];
-      if (incr > 0) {
-        fg[0] += square(incr) * cost_weights[Config::WEIGHT_EPSI_INC];
-      }
     }
 
     // Minimize the use of acceleration actuators.
