@@ -368,11 +368,16 @@ vector<double> MPC::run(double px, double py, double psi, double v, double steer
   // Solve MPC
   auto result = solve(state, target_speed, x_trajectory, y_trajectory);
   double steer_angle = result[6];
+
+  // Adjust steer at sharp turns so we can have more space for the turn
+  // the same as what a real driver will do
   if (std::fabs(max_yaw_change) > Config::steerAdjustmentThresh) {
     steer_angle += Config::steerAdjustmentRatio * max_yaw_change;
   }
 
+  // Clamp the acceleration to the targetted acceleration
   double accel = std::min(result[7], target_speed - v);
+  // normalize and clamp the steering to -1, and 1
   steer_value = clamp(steer_angle / Config::maxSteering, -1.0, 1.0);
 #ifdef VERBOSE_OUT
   cout << "Steering: " << steer_angle << ", " << result[9] << ", " << result[10] 
