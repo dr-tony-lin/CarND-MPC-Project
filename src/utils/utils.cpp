@@ -76,12 +76,13 @@ CppAD::AD<double>  computeSpeedTarget(CppAD::AD<double>  angle, double max) {
   return Config::steerSpeeds.back() < max? Config::steerSpeeds.back(): max;
 }
 
-double computeYawChange(Eigen::VectorXd poly, double x0, double x1) {
+double computeYawChange(Eigen::VectorXd poly, double x0, double x1, double ratio) {
   double psi0 = polypsi(poly, x0, x1 - x0);
   double psi1 = polypsi(poly, x1, x1 - x0);
   std::cout << "psi1: " << psi1 << ", psi0: " << psi0 << ", x1: " << x1 << ", x0: " << x0 
-                << ", der x1: " << polyder(poly, x1) << ", der x0: " << polyder(poly, x0) << std::endl;
-  return psi1 - psi0;
+                << ", der x1: " << polyder(poly, x1) << ", der x0: " << polyder(poly, x0)
+                << ", ratio: " << ratio << std::endl;
+  return (psi1 - psi0) * ratio;
 }
 
 double computeYawChangeSpeedLimit(double yawChange, double max) {
@@ -115,11 +116,11 @@ double computeThrottle(double accel, double target, double max_accel, double max
     if (accel <= -15) { // deceleration
       return -1;
     } else if (accel < -10) { // deceleration
-      return -0.95 - (1 - 0.95) * accel / max_decel;
+      return std::fmax(-1, -0.95 - (1 - 0.95) * accel / max_decel);
     } else if (accel < -5) { // deceleration
-      return -0.9 - (1 - 0.9) * accel / max_decel;
+      return std::fmax(-1, -0.9 - (1 - 0.9) * accel / max_decel);
     }
-    return -0.85 - (1 - 0.85) * accel / max_decel;
+    return std::fmax(-1, -0.85 - (1 - 0.85) * accel / max_decel);
   }
 }
 

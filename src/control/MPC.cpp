@@ -95,7 +95,9 @@ class FG_eval {
     // Penalize large delta and acceleration changes
     for (size_t i = 0; i < N-2; i++) { 
       fg[0] += square(vars[delta_start + i + 1] - vars[delta_start + i]) * cost_weights[Config::WEIGHT_DDELTA];
-      fg[0] += square(vars[a_start + i + 1] - vars[a_start + i]) * cost_weights[Config::WEIGHT_DA];
+      if (vars[a_start + i + 1] > vars[a_start + i]) { // Only if we accelerate
+        fg[0] += square(vars[a_start + i + 1] - vars[a_start + i]) * cost_weights[Config::WEIGHT_DA];
+      }
     }
 
     fg[1 + x_start] = vars[x_start];
@@ -338,7 +340,7 @@ vector<double> MPC::run(double px, double py, double psi, double v, double steer
   double epsi = -polypsi(poly, 0, 1.0);
 
   // Compute the maximum speed according to the total psi change on the current center line curve
-  double max_yaw_change = computeYawChange(poly, 0, ptsx[ptsx.size() - 1]);
+  double max_yaw_change = computeYawChange(poly, 0, ptsx.back(), (ptsx.back() - ptsx.front())/ptsx.back());
   double max_speed = computeYawChangeSpeedLimit(max_yaw_change, Config::maxSpeed);
   // Compute the speed target according to steering
   double target_speed = computeSpeedTarget(steer, max_speed);
@@ -366,6 +368,10 @@ vector<double> MPC::run(double px, double py, double psi, double v, double steer
   // Solve MPC
   auto result = solve(state, target_speed, x_trajectory, y_trajectory);
   double steer_angle = result[6];
+  if (std::fabs(max_yaw_change) > Config::steerAdjustmentThresh) {
+    steer_angle += Config::steerAdjustmentRatio * max_yaw_change;
+  }
+
   double accel = std::min(result[7], target_speed - v);
   steer_value = clamp(steer_angle / Config::maxSteering, -1.0, 1.0);
 #ifdef VERBOSE_OUT

@@ -125,7 +125,7 @@ double computeSpeedTarget(double angle, double max);
  * @param x0 the starting position
  * @param x1 the ending position
  */ 
-double computeYawChange(Eigen::VectorXd poly, double x0, double x1);
+double computeYawChange(Eigen::VectorXd poly, double x0, double x1, double ratio);
 
 /**
  * Simple logic to adjust speed according to steering angle

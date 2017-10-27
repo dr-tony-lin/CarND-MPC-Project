@@ -121,7 +121,7 @@ int main() {
           // But it does not matter much.
           if (Config::latency) {
             moveVehicle(Config::lookahead + latencyReducer.mean<double>(), px, py, psi, v, steer,
-                        throttle_value * 4, Config::Lf);
+                        (throttle_value - v / Config::maxSpeed) * 8, Config::Lf);
           }
 
 #ifdef PLOT_TRAJECTORY

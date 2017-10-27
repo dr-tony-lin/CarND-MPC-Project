@@ -115,6 +115,16 @@ public:
   static double yawHigh;
 
   /**
+   * Steering angle adjustment threshold
+   */ 
+  static double steerAdjustmentThresh;
+
+  /**
+   * Steering angle adjustment ratio with respect to yaw change
+   */ 
+  static double steerAdjustmentRatio;
+
+  /**
    * Length from the front wheels to the center of the back wheels
    */ 
   static double Lf;
