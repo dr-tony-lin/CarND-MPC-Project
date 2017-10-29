@@ -15,6 +15,8 @@ double Config::maxDeceleration = MpH2MpS(-20);
 double Config::maxSpeed = MpH2MpS(100);
 double Config::Lf = 2.67;
 double Config::epsiPanic = 1;
+double Config::ctePanic = 0.6;
+double Config::cteOvershotRatio = 0.96;
 double Config::steerAdjustmentThresh = 0.6;
 double Config::steerAdjustmentRatio = 0.025;
 std::vector<double> Config::weights = {100, 100, 1, 1, 1, 5000, 1, 1000};
@@ -50,6 +52,8 @@ void Config::load(std::string fileName) {
   ipoptTimeout = js["ipopt timeout"];
   Lf = js["Lf"];
   epsiPanic = js["epsi panic"];
+  ctePanic = js["cte panic"];
+  cteOvershotRatio = js["cte overshot reduction ratio"];
   steerAdjustmentThresh = js["steer adjustment threshold"];
   steerAdjustmentRatio = js["steer adjustment ratio"];
   steerAdjustmentRatio = clamp(steerAdjustmentRatio, 0.0, 0.1);

@@ -335,9 +335,9 @@ vector<double> MPC::run(double px, double py, double psi, double v, double steer
 #endif
 
   // Calculate the CTE, origin is now 0, 0
-  double cte = polyeval(poly, 0);
+  double cte = poly[0];
   // Calculate the psi error, origin and psi are now all 0
-  double epsi = -polypsi(poly, 0, 1.0);
+  double epsi = -atan(poly[1]);
 
   // Compute the maximum speed according to the total psi change on the current center line curve
   double max_yaw_change = computeYawChange(poly, 0, ptsx.back(), (ptsx.back() - ptsx.front())/ptsx.back());
@@ -373,6 +373,12 @@ vector<double> MPC::run(double px, double py, double psi, double v, double steer
   // the same as what a real driver will do
   if (std::fabs(max_yaw_change) > Config::steerAdjustmentThresh) {
     steer_angle += Config::steerAdjustmentRatio * max_yaw_change;
+  }
+
+  // There looks like a steer overshot when CTE is large, try to redduce overshot here
+  if (fabs(cte) > Config::ctePanic) {
+    steer_angle *= Config::cteOvershotRatio + (1.0 - Config::cteOvershotRatio) / 
+                                              (1.0 + fabs(fabs(cte) - Config::ctePanic));
   }
 
   // Clamp the acceleration to the targetted acceleration

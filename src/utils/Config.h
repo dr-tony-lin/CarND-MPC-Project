@@ -49,10 +49,12 @@ public:
    * Index for negative velocity in the cost weight array
    */ 
   static const int WEIGHT_NEG_V = 9;
+  
   /**
    * Index for large epsi in the cost weight array
    */ 
   static const int WEIGHT_LARGE_EPSI = 10;
+
 
   /**
    * The timestep length
@@ -129,6 +131,16 @@ public:
    */ 
   static double Lf;
 
+  /**
+   * CTE's panic threshold
+   */ 
+  static double ctePanic;
+
+  /**
+   * CTE's panic overhot reduction ratio
+   */ 
+  static double cteOvershotRatio;
+  
   /**
    * epsi's panic threshold
    */ 
