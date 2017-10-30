@@ -375,7 +375,8 @@ vector<double> MPC::run(double px, double py, double psi, double v, double steer
     steer_angle += Config::steerAdjustmentRatio * max_yaw_change;
   }
 
-  // Try to reduce steering overshot when CTE is high
+  // Try to reduce steering overshot when CTE is high which may cause the latency simulation to be off
+  // the center which cause the steering to overshot
   if (fabs(cte) > Config::ctePanic) {
     steer_angle *= Config::cteOvershotRatio + (1.0 - Config::cteOvershotRatio) / 
                                               (1.0 + fabs(fabs(cte) - Config::ctePanic));
