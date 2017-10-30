@@ -43,9 +43,33 @@ static bool is_first = true;
 
 static Reducer<double> latencyReducer(5);
 
-int main() {
+static std::string configFile = "../config.json";
+static double maxSpeed = -1;
+static int latency = -1;
+
+int main(int argc, char *argv[]) {
   uWS::Hub h;
   
+  // Process command line options
+  for (int i = 1; i < argc; i++) {
+    if (std::string((argv[i])) == "-config") { // Set the number of particles
+      configFile = argv[++i];
+    } else if (std::string((argv[i])) == "-speed") { // set std GPS deviation
+      if (sscanf(argv[++i], "%lf", &maxSpeed) != 1) {
+        std::cerr << "Invalid speed: " << argv[i] << std::endl;
+        exit(-1);
+      }
+    } else if (std::string((argv[i])) == "-latency") { // set std GPS deviation
+      if (sscanf(argv[++i], "%d", &latency) != 1) {
+        std::cerr << "Invalid latency: " << argv[i] << std::endl;
+        exit(-1);
+      }
+    } else {
+      std::cerr << "Unknown option: " << argv[i] << std::endl;
+      exit(-1);
+    }
+  }
+
   h.onMessage([](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode) {
     // "42" at the start of the message means there's a websocket message event.
     // The 4 signifies a websocket message
@@ -203,8 +227,14 @@ int main() {
   });
 
   h.onConnection([&h](uWS::WebSocket<uWS::SERVER> ws, uWS::HttpRequest req) {
-    cout << "Connected!!!" << endl;
-    Config::load("../config.json");
+    cout << "Connected!!!, loading config from: " << configFile << endl;
+    Config::load(configFile);
+    if (latency >= 0) {
+      Config::latency = latency;
+    }
+    if (maxSpeed > 0) {
+      Config::maxSpeed = MpH2MpS(maxSpeed);
+    }
     
     latencyReducer.clear();
 #if defined(COLLECT_DATA) || defined(VERBOSE_OUT)
