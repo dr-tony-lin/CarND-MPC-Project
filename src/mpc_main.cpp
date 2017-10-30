@@ -117,11 +117,11 @@ int main() {
 #endif
           // Simulate car move to compensate the latency, the latency is the average MPC time + actuator latency
           // The real acceleration depends on the throttle, the current speed, the vehicle and the road
-          // Here we simply use the throttle value from the previous MPC times by a factor, here 4 is picked,
-          // But it does not matter much.
+          // Here we simply use the throttle value from the previous MPC times by a factor, here 6 is picked
+          // from emprical value for higher speed 35+ Mps where average accel/decel is around 6 * (throttle - v/50)
           if (Config::latency) {
             moveVehicle(Config::lookahead + latencyReducer.mean<double>(), px, py, psi, v, steer,
-                        (throttle_value - v / Config::maxSpeed) * 8, Config::Lf);
+                        (throttle_value - v / 50.0) * 6, Config::Lf);
           }
 
 #ifdef PLOT_TRAJECTORY
