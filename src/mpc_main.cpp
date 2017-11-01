@@ -43,7 +43,7 @@ static bool is_first = true;
 
 static Reducer<double> latencyReducer(5);
 
-static std::string configFile = "../config.json";
+static std::string configFile = "../config-fast.json";
 static double maxSpeed = -1;
 static int latency = -1;
 
@@ -64,6 +64,13 @@ int main(int argc, char *argv[]) {
         std::cerr << "Invalid latency: " << argv[i] << std::endl;
         exit(-1);
       }
+      if (!latency) {
+        configFile = "../config-no-latency.json";
+      }
+    } else if (std::string((argv[i])) == "-fast") { // set std GPS deviation
+      configFile = "../config-fast.json";
+    } else if (std::string((argv[i])) == "-stable") { // set std GPS deviation
+      configFile = "../config-stable.json";
     } else {
       std::cerr << "Unknown option: " << argv[i] << std::endl;
       exit(-1);

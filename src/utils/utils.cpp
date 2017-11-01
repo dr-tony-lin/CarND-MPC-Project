@@ -179,10 +179,12 @@ void moveVehicle(double dt, double &x, double &y, double &psi, double &velocity,
   // new velocity
   double v = velocity + acceleration * dt;
   if (velocity > Config::maxSpeed) velocity = Config::maxSpeed;
+#ifdef VERBOSE_OUT
   std::cout << "Move: " << dt << ", pos: " << x << ", " << y << ", psi:" << psi << ", steering: " << steering
             <<  ", accel: " << acceleration << ", velocity: " << velocity 
             << ", delta psi: " << delta_psi << ", to: " << px << ", " << py << ", psi: " << new_psi 
             << ", velocity: " << v << ", dist: " << dist << std::endl;
+#endif
   // update yaw
   x = px;
   y = py;
