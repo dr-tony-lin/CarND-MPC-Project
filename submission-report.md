@@ -20,7 +20,13 @@ This submission includes the following c++ files:
 **The MPC Controller**
 The PID controller can be launched with the following command:
 
-    ./mpc
+    ./mpc [-fast|-stable] [-speed n] [-latency n]
+
+Where:
+* -fast: run as fast as possible using config-fast.json
+* -stable: run stably at maximal 100 Mph using config-stable.json
+* -speed *n*: specify the maximal speed to be *n* Mph
+* -latency *n*: specify the latency to be *n* milliseconds instead of 100 milliseconds
 
 The program will listen on port 4567 for an incoming simulator connection. Only one simulator should be connected at anytime, though the program does not prohibit it. To start a new simulator, terminate the existing one first, then start a new one.
 
