@@ -55,6 +55,10 @@ public:
    */ 
   static const int WEIGHT_LARGE_EPSI = 10;
 
+  /**
+   * Index for large CTE in the cost weight array
+   */ 
+  static const int WEIGHT_LARGE_CTE = 11;
 
   /**
    * The timestep length
@@ -141,11 +145,6 @@ public:
    */ 
   static double ctePanic;
 
-  /**
-   * CTE's panic overhot reduction ratio
-   */ 
-  static double cteOvershotRatio;
-  
   /**
    * epsi's panic threshold
    */ 

@@ -69,12 +69,17 @@ class FG_eval {
 
     // Penalize large  CTE, epsi, and v error
     for (size_t i = 0; i < N; i++) {
-      fg[0] += square(vars[cte_start + i]) * cost_weights[Config::WEIGHT_CTE];
-      // Penalize large psi more
+      if (CppAD::fabs(vars[cte_start + i]) < Config::ctePanic) {
+        fg[0] += square(vars[cte_start + i]) * cost_weights[Config::WEIGHT_CTE];
+      }
+      else { // Penalize large CTE
+        fg[0] += square(vars[cte_start + i]) * cost_weights[Config::WEIGHT_LARGE_CTE];
+      }
+
       if (CppAD::fabs(vars[epsi_start + i]) > Config::epsiPanic) { // large epsi
           fg[0] += square(vars[epsi_start + i]) * cost_weights[Config::WEIGHT_LARGE_EPSI];
       }
-      else {
+      else { // Penalize large psi
         fg[0] += square(vars[epsi_start + i]) * cost_weights[Config::WEIGHT_EPSI];
       }
 
@@ -305,7 +310,7 @@ vector<double> MPC::solve(VectorXd &state, double target_velocity, vector<double
     }
   }
 
-  #ifdef VERBOSE_OUT
+#ifdef VERBOSE_OUT
   std::cout << "Solution: " << solution.x << std::endl;
 #endif
 
@@ -365,21 +370,11 @@ vector<double> MPC::run(Vehicle &vehicle, vector<double> &ptsx, vector<double> &
   // normalize and clamp the steering to -1, and 1
   double steer_value = clamp(steer_angle / Config::maxSteering, -1.0, 1.0);
 
-  // Try to reduce steering overshot when CTE is high and the steering angle will make CTE to further increase
-  if (cte > Config::ctePanic && steer_angle < 0) {
-    steer_angle *= Config::cteOvershotRatio + (1.0 - Config::cteOvershotRatio) / 
-                                              (1.0 + cte - Config::ctePanic);
-  }
-  else if (cte < -Config::ctePanic && steer_angle > 0) {
-    steer_angle *= Config::cteOvershotRatio + (1.0 - Config::cteOvershotRatio) / 
-                                              (1.0 + fabs(fabs(cte) - Config::ctePanic));
-  }
-
 #ifdef VERBOSE_OUT
   cout << "Steering: " << steer_angle << ", " << result[9] << ", " << result[10] 
   << ", accel: " << result[7] << ", speed: " << result[3] << ", steer: " << steer_value
   << ", target speed: " << target_speed << ", CTE: " << result[4] << ", epsi: " << result[5] 
-  << ", cost: " << result[8] << ", max speed: " << max_speed << ", max yaw chaange: " << max_yaw_change
+  << ", cost: " << result[8] << ", max speed: " << max_speed << ", max yaw change: " << max_yaw_change
   << ", ratio: " << (ptsx.back() - ptsx.front())/ptsx.back() << endl;
 #endif
 

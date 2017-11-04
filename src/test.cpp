@@ -11,9 +11,9 @@ namespace plt = matplotlibcpp;
 
 int main() {
   MPC mpc;
-  int iters = 100;
+  int iters = 25;
 
-  Config::load("../config-fast.json");
+  Config::load("../config-stable.json");
 
   // vector<double> ptsx = {-134.97,-145.1165,-158.3417,-164.3164,-169.3365,-175.4917}; 
   // vector<double> ptsy = {18.404,4.339378,-17.42898,-30.18062,-42.84062,-66.52898};

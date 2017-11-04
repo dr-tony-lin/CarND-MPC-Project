@@ -1,12 +1,4 @@
 # MPC Control Project
-[MPC1]: ./MPC1.png
-[MPC2]: ./MPC3.png
-[15-1.5]: ./MPC-15-1_5.mp4
-[20-1]: ./MPC-20-1.mp4
-[20-1.5]: ./MPC-20-1_5.mp4
-[25-1]: ./MPC-25-1.mp4
-[MPC]: ./MPC.mp4
-
 ## Content of the Submission and Usage
 This submission includes the following c++ files:
 * mpc_main.cpp: the main function that communicates with the simulator and drive the MPC process. It was modified from the original [CarND-MPC-Propject](https://github.com/udacity/CarND-MPC-Project)
@@ -160,31 +152,33 @@ This class models the geometry of a road segment, and provide methods for comput
 
 ## Config class
 The Config class reads the hyper parameters from the config.json file:
-* N: the number of steps, json field "N"
-* dt: the duration of each step, json field "dt"
-* ipoptTimeout: the IPOPT timeout (in second), json field "ipopt timeout"
-* latency: control latency in millie seconds, json field "latency"
-* maxPolyOrder: the maximal fitting polynomial order, json field "max poly order"
-* maxSteering: Maximal steering angle, json field "max steering"
-* maxAcceleration: the maximal acceleration of vehicle, json field "max acceleration"
-* maxDeceleration: the maximal deceleration of vehicle, json field "max deceleration"
-* maxSpeed: the xaximal speed of vehicle, json field "max speed"
-* Lf: Length from the front wheels to the center of the back wheels, json field "Lf"
-* epsiPanic: the epsi's panic level. Above this, a bigger penality will be applied, json field "epsi penalize more"
-* weights: cost weights: 0: cte, 1: epsi, 2: v, 3: delta, 4: delta delta, 5: not used, a, 7: delta a, 8: large deceleration low velocity, 9: negative speed, 10: out of range epsi, json field "weights"
-* steers: Steering angles to map to speed target, json field "steers"
-* steerSpeeds: speeds for mapping steering angles to target speed, the last one is for the rest of steering angles, json field "steer speeds"
-* yawChanges: road orientation changes to map to speed limit, json field "yaw change"
-* yawChangeSpeeds: speed for mapping road orientation changes to speed limit, the last item is for the rest of orientation change, json field "yaw change speed"
+* N: the number of steps, json field: "N"
+* dt: the duration of each step, json field: "dt"
+* ipoptTimeout: the IPOPT timeout (in second), json field: "ipopt timeout"
+* latency: control latency in millie seconds, json field: "latency"
+* maxFitOrder: the maximal polynomial fitting order for road, json field: "max polynomial fitting order"
+* maxFitError: the maximal polynomial fitting error for road, json field: "max polynomial fitting error"
+* maxSteering: Maximal steering angle, json field: "max steering"
+* maxAcceleration: the maximal acceleration of vehicle, json field: "max acceleration"
+* maxDeceleration: the maximal deceleration of vehicle, json field: "max deceleration"
+* maxSpeed: the xaximal speed of vehicle, json field: "max speed"
+* Lf: Length from the front wheels to the center of the back wheels, json field: "Lf"
+* epsiPanic: the epsi's panic level. Above this, a bigger penality will be applied, json field: "epsi panic"
+* ctePanic: the cte's panic level. Above this, a bigger penality will be applied, json field: "cte panic"
+* steerAdjustmentThresh: simulate human driver to steer more on sharp turns, json field: "steer adjustment threshold",
+* steerAdjustmentRatio: the ratio of the road's orientation change to apply to steering angle, json field:  "steer adjustment ratio": 0.022,
+* weights: cost weights: 0: cte, 1: epsi, 2: v, 3: delta, 4: delta delta, 5: not used, a, 7: delta a, 8: large deceleration low velocity, 9: negative speed, 10: out of range epsi, json field: "weights"
+* steers: Steering angles to map to speed target, json field: "steers"
+* steerSpeeds: speeds for mapping steering angles to target speed, the last one is for the rest of steering angles, json field: "steer speeds"
+* yawChanges: road orientation changes to map to speed limit, json field: "yaw change"
+* yawChangeSpeeds: speed for mapping road orientation changes to speed limit, the last item is for the rest of orientation change, json field: "yaw change speed"
 
 ## Utility functions
 Some utility functions are defined in utils.[h, cpp] for:
 * Transformation between map coordinate and vehicle coordinate, **globalToVehicle()**, **vehicleToGlobal()**
 * Polynomial fitting, **polyfit()** 
 * Evaluating polynomial, **polyeval()**
-* Evaluating first order derivatives of a polynomial, **polypsi()**
-* Moving vehicle, **moveVehicle()**
-* Computing speed limit and target speed, **computeSpeedTarget()**, **computeYawChangeSpeedLimit()**, **computeYawChange()**
+* Evaluating first order derivatives of a polynomial, **polyder()**
 * unit conversion like mph(mile per hour) and meter per second (mps), degree and radian, (**MpH2MpS()**, **MpS2MpH()**, **deg2rad()**, **rad2deg()**)
 * Angle normalization to [-PI, PI], **normalizeAngle()**, and value clampping, **clamp()**
 
@@ -223,7 +217,7 @@ The acceleration result produced by IPOPT cannot be used as is, otherwise, the v
 The acceleration that is used to determine the throttle is taken from the minimal of the IPOPT result and the acceleration/deceleration required to reach the target speed.
 
 ### MPC cost
-The total MPC cost is summed from weighted squares of:
+The total MPC cost is summed from **weighted squares** of:
 * CTE
 * epsi
 * velocity
@@ -235,62 +229,99 @@ The total MPC cost is summed from weighted squares of:
 The experiments showed that tuning weights for CTE, epsi, steering angle, and change in steering angle is important for the vehicle's overall stability.
 
 ## Hyper parameter tuning
-The results of tunning the hyper parameters show the following:
-
-* N: between 20, to 30
-* dt: around 0.05
-* cte weight: 1 to 1.5
-* epsi weight: around 100 for epsi less than the panic level, otherwise 5000
-* delta weight: 400 to 800
-* delta delta weight: 1000
 
 ### N and dt
 The N, the number of times steps, and dt, the duration of each time step, parameters determine the event horizon of the MPC in that:
 
     event horizon = N * dt
 
-N affects the event horizon and the IPOPT time, both are proporotional to N. Chosing a large N will require more processing time, and the result may not improve. Experiements have shown that when event horizon is above 1.5 seconds, instability starts to increase. In some case, it may take IPOPT a lot longer to converge (can be over few hundred millie seconds), and fails.
+N affects the event horizon and the IPOPT time, both are proporotional to N. Chosing a large N will require more processing time, buit the result may not improve as much. Experiements have shown that a large N will cause IPOPT to timeout.
 
-The values of dt affect the event horizon, and the precision of MPC, the smaller the value, the more accurate result may be obtained, but at the cost of reduced event horizon.
-
-Experiments have found setting N to be between 10 and 30, and dt to be between 0.1 and 0.05 for 1 second of event horizon seem good choices.
+The values of dt affect the MPC accuracy, when dt is too large, a large MPC error may result.
 
 ## Results
 
-The following videos shows the simulation results with different steps, and CTE weights:
+The best MPC results were obtained with an event horizon of 1 second, and a dt close to the total latency which is the sum of the MPC computation time and the vehicle control latency. An example video for N = 10 and dt = 0.1 is shown [here](./MPC-10-1-120.mp4), and the corresponding video without trajectory is shown [here](./MPC.mp4)
 
-|                                   |       Video              |
-|:----------------------------------|:------------------------:|
-| N: 15, dt: 0.05, CTE weight: 1.5  |[Video](MPC-15-1_5.mp4)   |
-| N: 20, dt: 0.05, CTE weight: 1    |[Video](MPC-20-1.mp4)     |
-| N: 20, dt: 0.05, CTE weight: 1.5  |[Video](MPC-20-1_5.mp4)   |
-| N: 25, dt: 0.05, CTE weight: 1    |[Video](MPC-25-1.mp4)     |
-
-A video without trajectory for N = 20, and CTE = 1 is [shown here](./MPC.mp4)
+### The effects of N and DT on CTE and ePsi
 
 The following charts show MPC iterations for different N and DT:
 
-|                 |       Graph              |
-|:----------------|:------------------------:|
-| N: 10, dt: 0.1  |[Graph 1](10-01-2.png)      |
-| N: 20, dt: 0.1  |[Graph 2](20-01-2.png)      |
-| N: 30, dt: 0.1  |[Graph 3](30-01-2.png)      |
-| N: 10, dt: 0.05 |[Graph 4](10-005-2.png)     |
-| N: 20, dt: 0.05 |[Graph 5](20-005-2.png)     |
-| N: 30, dt: 0.05 |[Graph 6](30-005-2.png)     |
-| N: 40, dt: 0.05 |[Graph 7](40-005-2.png)     |
-| N: 50, dt: 0.02 |[Graph 8](50-002.png)       |
+|   dt in seconds |       Graph                       |
+|:----------------|:---------------------------------:|
+| N: 10, dt: 0.1  |[Graph 1](examples/10-01-2.png)    |
+| N: 20, dt: 0.1  |[Graph 2](examples/20-01-2.png)    |
+| N: 30, dt: 0.1  |[Graph 3](examples/30-01-2.png)    |
+| N: 40, dt: 0.1  |[Graph 4](examples/40-01-2.png)    |
+| N: 10, dt: 0.05 |[Graph 5](examples/10-005-2.png)   |
+| N: 20, dt: 0.05 |[Graph 6](examples/20-005-2.png)   |
+| N: 30, dt: 0.05 |[Graph 7](examples/30-005-2.png)   |
+| N: 40, dt: 0.05 |[Graph 8](examples/40-005-2.png)   |
+| N: 50, dt: 0.05 |[Graph 9](examples/50-005.png)     |
+| N: 10, dt: 0.02 |[Graph 10](examples/10-002.png)    |
+| N: 20, dt: 0.02 |[Graph 11](examples/20-002.png)    |
+| N: 30, dt: 0.02 |[Graph 12](examples/30-002.png)    |
+| N: 40, dt: 0.02 |[Graph 13](examples/40-002.png)    |
+| N: 50, dt: 0.02 |[Graph 14](examples/50-002.png)    |
 
-The graphs show that the irregularity increases as N increase roughly after passing 1.5 second event horizon that result in large CTE spike at the end like [Graph 6](30-005-2.png) and [Graph 7](40-005-2.png). When the event horizon is too small, large errors will also occur, like [Graph 4](10-005-2.png). 
+The graphs show:
 
-Also comparing dt = 0.1 and dt=0.05, the former has large CTE errors at the end e.g. [Graph 1](10-01-2.png), [Graph 2](20-01-2.png). This may suggest that smaller dt is preferable given a event horizon if the computing resource permits, [Graph 8](50-002.png) with dt = 0.02 has a much smoother and smaller CTE at the end may be another prove. 
+1. The initial CTE and/or ePsi decrease as N increase first, then stop increasing after certain value of N.
+2. A smaller event horizon results in a large CTE.
+3. Increasing N may improves CTE and ePsi, but not for a small dt
 
-Unfortunately, setting dt = 0.02 will require N = 50 for 1 second of event horizon, and may not always be feasible.
+#### Small dt
 
-### Discussion
-During the tunning, I have observed the followings:
-1. CTE weights outside [1, 2] may reduce the vehicle's stability
-2. High CTE weight may cause MPC overshot, and subsequent correction will cause the vehicle to oscillate
-3. Low CTE will cause the MPC undershot, and the vehicle may run off the road. Also subsequent correction will cause the vehicle to oscillate
+Also comparing dt = 0.1 seconds with dt=0.05 seconds, the former has smaller CTE and ePsi at the begining. This may suggest that smaller dt is not necessary preferable for a given event horizon.
 
-This also suggects that allowing a small CTE, as long as it is not too large to cause the vehicle to run off the road or oscillate, can improve the stability of the vehicle.
+This is confirmed in my experiments that the vehicle appeared to be increasingly unstable as dt decreases. With a small dt, the vehicle will oscillate a lot. [This video](examples/MPC-50-02-80.mp4) show an example with N = 50 and dt = 0.02 seconds. The instability due to small dt may also be contributed by the fact that the actuators obtained from the first dt are used, and when the value of dt is significantly smaller than the control latency, the actuators will not be able to cover what are required for the entire latency period.
+
+#### Large dt
+
+### Small N
+
+A small N will have a small event horizon and results in larger CTE, this can be seen by comparing videos [N = 10, dt = 0.05 seconds](examples/MPC-10-05-80.mp4]) with [N = 20, dt = 0.05 seconds](examples/MPC-20-05-80.mp4]) where the vehicle in the first video moves very closed to the edge of the road at sharp turns.
+
+Using a dt that is significantly large than the latency may reduce accuracy significantly, and degrade the vehicle's ability to handle sharp turns. This can be shown in [this video](examples/MPC-10-2-80.mp4) whose N = 10, and dt = 0.2 seconds.
+
+#### Large N
+
+Experiments also show that large event horizon due to large N does not improve MPC performance. This can be show in the following videos [N = 20, dt = 0.05 seconds](examples/MPC-20-05-80.mp4]) vs [N = 40, dt = 0.05 seconds](examples/MPC-40-05-80.mp4])
+
+### Cost weights
+
+Weights are relative, increasing one will reduce the importance others. For vehicle control, minimizing CTE, ePsi, and the actuators is the goal of the MPC control. To reduce weight tuning efforts, it is important to tune weights around a reference.
+
+#### Reference weight
+
+CTE's weight has been chosen as the reference, and it has been set to 1.0 in the configuration files. Changing this value has greater impact on the vehicle's overall stability, and is not recommended.
+
+On the other hand, we still want to avoid high CTE to prevent the vehicle to run off the road. This is done by using multiple weights for different CTE ranges. In the MPC implementation, a CTE panic threashold divide the CTE into two range, the normal weight is applied when CTE is below the panic level, and a much high weight is applied when CTE is above the panic level.
+
+#### ePsi's weight
+
+A high ePsi weight reduces the importantance of CTE, and will result in large CTE and poor vehicle stability. Conversely, a low ePsi weight will result in high ePsi errors and poor stability. Experiments have shown that ePsi weights between 80 and 120 yield better result at high speed.
+
+In addition, we still want to avoid high ePsi to prevent the vehicle to run off the road. This is done in the same way as the CTE. In the MPC implementation, a ePsi panic threashold divide the ePsi into two range, the normal weight is applied when ePsi is below the panic level, and a much high weight is applied when ePsi is above the panic level.
+
+[This graph](examples/ePsi-weights.png) shows the effects of ePsi's weight. Weight 1000 has larger CTE errors but smaller ePsi errors comparing to weight 100.
+
+#### Delta acutator's weight
+
+Delta actuator's weight has no significant impact on the vehicle's stability unless it is exceedingly large. This is shown in [this graph](examples/delta-weights.png) where larger CTE errors can be seen with weight 5000.
+
+#### Velocity's weights
+
+The velocity's weight has no significant impact the vehicle's stability. However, setting the weight to 0 will cause the vehicle to stale or reverse. This can be seen in [this graph](examples/velocity-weights.png) where weight 1 and 100 produce the same result, but the vehicle decelerates when weight is 0.
+
+#### Acceleration acuator's weight
+
+The acceleration actuator's weight has no visuable impact on the MPC results, this can be seen from [this graph](examples/accel-weights.png) for weight 0, 100, and 10000.
+
+#### Delta actuator's change weight
+
+The delta actuator's change weight has no significant impact on the MPC results unless it is exceedingly large. This can be seen from [this graph](examples/delta-delta-weights.png) where weight 5000 has slightly larger CTE errors.
+
+#### Acceleration actuator's change weight
+
+The acceleration actuator's change weight has no visuable impact on the MPC results. This can be seen from [this graph](examples/delta-accel-weights.png).

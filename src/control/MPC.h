@@ -37,6 +37,7 @@ class MPC {
    * @param x_trajectory control trjectory for x axis, default NULL
    * @param y_trajectory control trjectory for y axis, default NULL
    * @param dir moving direction, should be any positive number
+   * @return a vector of x, y, psi, v, cte, epsi, delta, a, and cost
    */ 
   vector<double> solve(VectorXd &state, double target_velocity,
     vector<double> *x_trajectory=NULL, vector<double> *y_trajectory=NULL, double dir=1);
@@ -48,6 +49,7 @@ class MPC {
    * @param ptsy the y trajectory of the center line
    * @param x_trajectory the x trajectory of the center line in the target's coordinate
    * @param y_trajectory the y trajectory of the center line in the target's coordinate
+   * @return a vector of x, y, psi, v, steer (normalized to [-1, 1]), a, cte, and epsi
    */
   vector<double> run(Vehicle &vehicle, vector<double> &ptsx, 
     vector<double> &ptsy, vector<double> *x_trajectory = NULL, vector<double> *y_trajectory = NULL);
