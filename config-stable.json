@@ -6,7 +6,7 @@
   "max steering": 25,
   "max acceleration": 10,
   "max deceleration": -20,
-  "max speed": 110,
+  "max speed": 120,
   "Lf": 2.67,
   "epsi panic": 0.1,
   "cte panic": 0.6,

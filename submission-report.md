@@ -56,7 +56,7 @@ make
 The program can be built to output more information for disgnosis purposes by defining **VERBOSE_OUT** macro.
 In addition, the following macros can be defined:
 
-* SKIP_TRAJECTORY: when defined, trajectory will not be shown on the simulator
+* PLOT_TRAJECTORY: when defined, trajectory will be shown on the simulator
 * COLLECT_DATA: when defined, control data and simulator inputs will be written to stderr in CSV format.
 * TRACE_IPOPT: when defined, IPOPT trace will be printed to the stdout.
 * EXIT_ON_IPOPT_FAILURE, when defined, IPOPT failure will cause the program to exit

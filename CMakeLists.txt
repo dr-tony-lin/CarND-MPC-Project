@@ -6,9 +6,9 @@ cmake_minimum_required (VERSION 3.5)
 # turn on -03 for best performance
 add_definitions(-std=c++11 -O3)
 
-if (SHOW_TRAJECTORY)
+if (PLOT_TRAJECTORY)
     add_definitions(-DPLOT_TRAJECTORY=1)
-endif(SHOW_TRAJECTORY)
+endif(PLOT_TRAJECTORY)
 
 if (VERBOSE_OUT)
     add_definitions(-DVERBOSE_OUT=1)

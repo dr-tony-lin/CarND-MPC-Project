@@ -44,7 +44,7 @@ static bool is_first = true;
 
 static Reducer<double> latencyReducer(5);
 
-static std::string configFile = "../config-fast.json";
+static std::string configFile = "../config-stable.json";
 static double maxSpeed = -1;
 static int latency = -1;
 
