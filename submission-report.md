@@ -241,7 +241,7 @@ The values of dt affect the MPC accuracy, when dt is too large, a large MPC erro
 
 ## Results
 
-The best MPC results were obtained with an event horizon of 1 second, and a dt close to the total latency which is the sum of the MPC computation time and the vehicle control latency. An example video for N = 10 and dt = 0.1 is shown [here](./MPC-10-1-120.mp4), and the corresponding video without trajectory is shown [here](./MPC.mp4)
+The best MPC results were obtained with an event horizon of 1 second, and a dt close to the total latency which is the sum of the MPC computation time and the vehicle control latency. An example video for N = 10 and dt = 0.1 is shown [here](./MPC-trajectory.mp4), and the corresponding video without trajectory is shown [here](./MPC.mp4)
 
 ### The effects of N and DT on CTE and ePsi
 
