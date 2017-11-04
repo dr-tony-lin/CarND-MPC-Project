@@ -320,8 +320,8 @@ The acceleration actuator's weight has no visuable impact on the MPC results, th
 
 #### Delta actuator's change weight
 
-The delta actuator's change weight has no significant impact on the MPC results unless it is exceedingly large. This can be seen from [this graph](examples/delta-delta-weights.png) where weight 5000 has slightly larger CTE errors.
+[The graph](examples/delta-delta-weights.png) where weight 5000 has slightly larger CTE errors seems to suggest that the weight of delta actuator's change has minor impacts on the MPC results. Experiments have shown that this weight affects the vehicle's stability in a more substle fashion in which small weights will reduce the stability of the vehicle, while a large weight will result in large CTE errors. A value between 1000 and 1500 seems a reasonable choice.
 
 #### Acceleration actuator's change weight
 
-The acceleration actuator's change weight has no visuable impact on the MPC results. This can be seen from [this graph](examples/delta-accel-weights.png).
+The weight of acceleration actuator's change has no visuable impact on the MPC results. This can be seen from [this graph](examples/delta-accel-weights.png).
