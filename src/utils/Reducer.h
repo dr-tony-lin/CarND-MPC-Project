@@ -10,15 +10,15 @@ using namespace std;
  */ 
 template<typename T> class Reducer {
   // size of the samples to reduce
-  int limit;
+  size_t limit;
   // total samples received so far
   long long total_samples;
   // queue of samples to keep
   deque<T> queue; 
 public:
-  Reducer(int size_limit): limit(size_limit), total_samples(0), queue(0) {};
+  Reducer(size_t size_limit): limit(size_limit), total_samples(0), queue(0) {};
 
-  int getLimit() { return limit;}
+  size_t getLimit() { return limit;}
 
   /**
    * Clear the reducer
@@ -67,7 +67,7 @@ public:
   T max() {
     if (queue.size() > 0) {
       T max = queue[0];
-      for (int i = 1; i < queue.size(); i++) {
+      for (size_t i = 1; i < queue.size(); i++) {
         T &a = queue[i];
         if (max < a) {
           max = a;
@@ -86,7 +86,7 @@ public:
   T min() {
     if (queue.size() > 0) {
       T min = queue[0];
-      for (int i = 1; i < queue.size(); i++) {
+      for (size_t i = 1; i < queue.size(); i++) {
         T &a = queue[i];
         if (min > a) {
           min = a;
@@ -107,7 +107,7 @@ public:
     V total = 0;
     V total_w = 0;
     if (queue.size()) {
-      for (int i = 0; i < queue.size(); i++) {
+      for (size_t i = 0; i < queue.size(); i++) {
         total += V(weights[i] * queue[i]);
         total_w += V(weights[i]);
       }
@@ -124,7 +124,7 @@ public:
     V total = 0;
     V total_w = 0;
     if (queue.size()) {
-      for (int i = 0; i < queue.size(); i++, weights++) {
+      for (size_t i = 0; i < queue.size(); i++, weights++) {
         total += V(*weights * queue[i]);
         total_w += V(*weights);
       }
@@ -139,7 +139,7 @@ public:
   template<typename V> V  mean() {
     V total = 0;
     if (queue.size()) {
-      for (int i = 0; i < queue.size(); i++) {
+      for (size_t i = 0; i < queue.size(); i++) {
         total += queue[i];
       }
       return total/queue.size();
@@ -153,7 +153,7 @@ public:
   T sum() {
     T total = 0;
     if (queue.size()) {
-      for (int i = 0; i < queue.size(); i++) {
+      for (size_t i = 0; i < queue.size(); i++) {
           total += queue[i];
       }
       return total;

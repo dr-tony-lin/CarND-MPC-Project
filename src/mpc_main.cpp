@@ -10,6 +10,7 @@
 #include "utils/utils.h"
 #include "utils/Config.h"
 #include "utils/Reducer.h"
+#include "model/Vehicle.h"
 #include "control/MPC.h"
 #include "json.hpp"
 
@@ -84,7 +85,6 @@ int main(int argc, char *argv[]) {
     string sdata = string(data).substr(0, length);
 
     if (sdata.size() > 2 && sdata[0] == '4' && sdata[1] == '2') {
-      static double steer_angle = 0; // steering angle from MPC
       static double steer_value = 0; // steering to sent to the simulator
       static double accel = 0;  // acceleration from MPC
       static double throttle_value = 0; // throttle to sent to the simulator
@@ -97,6 +97,7 @@ int main(int argc, char *argv[]) {
         if (event == "telemetry") {
           // The controller
           MPC mpc;
+          Vehicle vehicle;
 
 #if defined(COLLECT_DATA) || defined(VERBOSE_OUT)
           // Compute elapsed time since last message
@@ -150,9 +151,11 @@ int main(int argc, char *argv[]) {
           // The real acceleration depends on the throttle, the current speed, the vehicle and the road
           // Here we simply use the throttle value from the previous MPC times by a factor, here 6 is picked
           // from emprical value for higher speed 35+ Mps where average accel/decel is around 6 * (throttle - v/50)
+          
+          vehicle.setLength(Config::Lf);
+          vehicle.update(px, py, psi, v, steer, (throttle_value - v / 50.0) * 6);
           if (Config::latency) {
-            moveVehicle(Config::lookahead + latencyReducer.mean<double>(), px, py, psi, v, steer,
-                        (throttle_value - v / 50.0) * 6, Config::Lf);
+            vehicle.move(Config::lookahead + latencyReducer.mean<double>());
           }
 
 #ifdef PLOT_TRAJECTORY
@@ -161,15 +164,14 @@ int main(int argc, char *argv[]) {
           // coordinate system the points in the simulator are connected by a Yellow line
           vector<double> mpc_x_vals;
           vector<double> mpc_y_vals;
-          vector<double> result = mpc.run(px, py, psi, v, steer, ptsx, ptsy, &mpc_x_vals, &mpc_y_vals);
+          vector<double> result = mpc.run(vehicle, ptsx, ptsy, &mpc_x_vals, &mpc_y_vals);
 #else
-          vector<double> result = mpc.run(px, py, psi, v, steer, ptsx, ptsy);
+          vector<double> result = mpc.run(vehicle, ptsx, ptsy);
 #endif
-          steer_angle = result[4] * Config::maxSteering; // the steering angle in radian
           accel = result[5]; // the acceleration in meter/s
           steer_value = -result[4]; // the steering in simulator's radial coordinate
           // Estimate the throttle value from acceleration and velocity from MPC
-          throttle_value = computeThrottle(accel, result[3], Config::maxAcceleration, Config::maxDeceleration);
+          throttle_value = vehicle.computeThrottle(accel, result[3], Config::maxAcceleration, Config::maxDeceleration);
 
           // For average MPC time to set for compensating the latency
           nanoseconds elapsed = duration_cast<nanoseconds> (high_resolution_clock::now() - stime);

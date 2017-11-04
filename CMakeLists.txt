@@ -6,9 +6,9 @@ cmake_minimum_required (VERSION 3.5)
 # turn on -03 for best performance
 add_definitions(-std=c++11 -O3)
 
-if (NOT SKIP_TRAJECTORY)
+if (SHOW_TRAJECTORY)
     add_definitions(-DPLOT_TRAJECTORY=1)
-endif(NOT SKIP_TRAJECTORY)
+endif(SHOW_TRAJECTORY)
 
 if (VERBOSE_OUT)
     add_definitions(-DVERBOSE_OUT=1)
@@ -29,7 +29,7 @@ endif(COLLECT_DATA)
 set(CXX_FLAGS "-Wall")
 set(CMAKE_CXX_FLAGS "${CXX_FLAGS}")
 
-set(sources src/control/MPC.cpp src/utils/utils.cpp src/utils/Config.cpp)
+set(sources src/control/MPC.cpp src/model/Vehicle.cpp src/model/RoadGeometry.cpp src/utils/utils.cpp src/utils/Config.cpp)
 include_directories(libs)
 
 include_directories(/usr/local/include)

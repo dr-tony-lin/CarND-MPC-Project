@@ -12,6 +12,8 @@ This submission includes the following c++ files:
 * mpc_main.cpp: the main function that communicates with the simulator and drive the MPC process. It was modified from the original [CarND-MPC-Propject](https://github.com/udacity/CarND-MPC-Project)
 * test.cpp: a test program for testing MPC, it was used to generate the graphs
 * control/MPC.[h, cpp]: the MPC controller
+* model/Vehicle.[h, cpp]: a vehicle model class that implements a simple vehicle motion model
+* model/RoadGeometry.[h, cpp]: geometry class that models a road segment
 * utils/Config.[h, cpp]: the Config class for providing hyper parameters from config.json file
 * utils/utils.[h, cpp]: utility functions
 * utils/Reducer.h: the Reducer class for sum, mean, min, max on a collection of samples.
@@ -136,6 +138,26 @@ Where:
 * delta0, and a0 are the current actuator values
 * coeffs is the fitting polynomial coefficients of the center line
 
+## Vehicle class
+The Vehicle class implements a simple vehicle motion model:
+
+**distance** = *velocity * dt*
+
+**delta_psi** = *steering * dist / Config::Lf*
+
+**psi** = *psi + delta_psi*
+
+**x** = *x + dist * cos(psi)*
+
+**y** = *y + dist * sin(psi)*
+
+**v** = *v + acceleration * dt*
+
+In addition, it also provide methods for converting vehicle coordinate system and the global coordinate system, determining the maximal vehicle speed, and computing the throttle value for a given acceleration.
+
+## RoadGemoetry class
+This class models the geometry of a road segment, and provide methods for computing the cross track error given a location, orientation given x, maximal turn (orientation change) between two locations, and y coordinate fiven x.
+
 ## Config class
 The Config class reads the hyper parameters from the config.json file:
 * N: the number of steps, json field "N"
@@ -180,23 +202,9 @@ Each MPC iteration includes the following steps:
 7. Send the acutator results from MPC to the simulator
 
 ### Simulate vehicle movement
-In order to simulate the vehicle movement during the latency, we need to know the current vehicle acceleration in addition to vehicle location, orientation, and steering angle provided by the simulator. Unfortunately the current vehicle acceleration cannot be obtained from throttle easily as it depends on the vehicle and road.
+In order to simulate the vehicle movement during the latency, we need to know the current vehicle acceleration in addition to vehicle location, orientation, and steering angle provided by the simulator. Unfortunately the vehicle's acceleration cannot be obtained from throttle easily as it depends on not only the vehicle but the road's slope and condition also.
 
-The implementation uses a very simple logic - by multiplying the current throttle with a constant, which is 4 at present. Emprically, this seems fine. Also, I have tried other values between 1 to 10, and did not observe big differences.
-
-The moving model is:
-
-**distance** = *velocity * dt*
-
-**delta_psi** = *steering * dist / Config::Lf*
-
-**psi** = *psi + delta_psi*
-
-**x** = *x + dist * cos(psi)*
-
-**y** = *y + dist * sin(psi)*
-
-**v** = *v + acceleration * dt*
+The implementation uses a very simple logic - by multiplying the current throttle with a constant, which is 6 at present. Experiments have shown that chosing any value between 1 and 10 yielded no significant differences. 6 was picked as an average.
 
 ## Determine vehicle speed
 Since the center line curve is available, we could determine the maximal speed like a real driver who will accelerate or decelerate according to much turn that needs to be made. This is implemented as follow:

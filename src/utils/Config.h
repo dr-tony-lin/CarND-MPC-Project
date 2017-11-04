@@ -82,9 +82,14 @@ public:
   static double lookahead;
   
   /**
-   * The maximal polynomial order
+   * The maximal polynomial fitting order
    */
-  static int maxPolyOrder;
+  static int maxFitOrder;
+
+  /**
+   * The maximal polynomial fit error
+   */
+  static double maxFitError;
 
   /** 
    * Maximal steering angle

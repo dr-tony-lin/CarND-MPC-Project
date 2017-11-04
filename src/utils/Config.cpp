@@ -4,7 +4,8 @@
 
 size_t Config::N = 25;
 
-int Config::maxPolyOrder = 4;
+int Config::maxFitOrder = 4;
+double Config::maxFitError = 0.5;
 long Config::latency = 100;
 double Config::lookahead = 0;
 double Config::ipoptTimeout = 0.5;
@@ -48,7 +49,8 @@ void Config::load(std::string fileName) {
   speedScale = maxSpeed/MpH2MpS(100.0);
   latency = js["latency"];
   lookahead = latency * 1.0E-3;
-  maxPolyOrder= js["max poly order"];
+  maxFitOrder= js["max polynomial fitting order"];
+  maxFitError= js["max polynomial fitting error"];
   ipoptTimeout = js["ipopt timeout"];
   Lf = js["Lf"];
   epsiPanic = js["epsi panic"];
@@ -62,7 +64,7 @@ void Config::load(std::string fileName) {
   std::vector<double> st = js["steers"];
   steers = st;
   std::vector<double> sts = js["steer speeds"];
-  for (int i = 0; i < sts.size(); i++) {
+  for (size_t i = 0; i < sts.size(); i++) {
     if (speedScale <= 1) {
       sts[i] = std::fmin(MpH2MpS(sts[i]), maxSpeed);
     }
@@ -74,7 +76,7 @@ void Config::load(std::string fileName) {
   std::vector<double> yc = js["yaw changes"];
   yawChanges = yc;
   std::vector<double> ycs = js["yaw change speeds"];
-  for (int i = 0; i < ycs.size(); i++) {
+  for (size_t i = 0; i < ycs.size(); i++) {
     if (speedScale <= 1) {
       ycs[i] = std::fmin(MpH2MpS(ycs[i]), maxSpeed);
     }

@@ -5,6 +5,7 @@
 #include "Eigen/Core"
 #include "Eigen/QR"
 #include "matplotlibcpp.h"
+#include "model/Vehicle.h"
 
 namespace plt = matplotlibcpp;
 
@@ -12,7 +13,7 @@ int main() {
   MPC mpc;
   int iters = 100;
 
-  Config::load("../config.json");
+  Config::load("../config-fast.json");
 
   // vector<double> ptsx = {-134.97,-145.1165,-158.3417,-164.3164,-169.3365,-175.4917}; 
   // vector<double> ptsy = {18.404,4.339378,-17.42898,-30.18062,-42.84062,-66.52898};
@@ -57,8 +58,13 @@ int main() {
   std::vector<double> delta_vals;
   std::vector<double> a_vals;
 
-  double steer = 0;
-  vector<double> vars = mpc.run(x, y, psi, v, steer, ptsx, ptsy);
+  Vehicle vehicle;
+  RoadGeometry roadGeometry;
+
+  vehicle.setLength(Config::Lf);
+  vehicle.update(x, y, psi, v, 0, 0);
+
+  vector<double> vars = mpc.run(vehicle, ptsx, ptsy);
 
   x_vals.push_back(vars[0]);
   y_vals.push_back(vars[1]);
@@ -73,7 +79,7 @@ int main() {
   Eigen::VectorXd state(6);
   state << vars[0], vars[1], vars[2], vars[3], vars[6], vars[7];
 
-  for (size_t i = 0; i < iters; i++) {
+  for (int i = 0; i < iters; i++) {
     std::cout << "Iteration " << i << std::endl;
     try {
       auto vars = mpc.solve(state, 40);

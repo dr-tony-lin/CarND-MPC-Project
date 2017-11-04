@@ -5,6 +5,7 @@
 #include "Eigen/Core"
 #include "../utils/utils.h"
 #include "../utils/Config.h"
+#include "../model/RoadGeometry.h"
 
 using CppAD::AD;
 using namespace std;
@@ -22,18 +23,25 @@ class FG_eval {
   double dir;
 
   /**
-   * Fitted polynomial coefficients
+   * The vehicle
    */ 
-  VectorXd &coeffs;
+  Vehicle &vehicle;
+
+  /**
+   * Geometry of the road
+   */ 
+  RoadGeometry &roadGeometry;
 
  public:
   /**
    * Constructor
-   * @param coeffs the fitted polynomial coefficients
+   * @param vehivle the vehicle
+   * @param road the road geometry
    * @param target_velocity the target velocity to reach or maintain
    * @param dir the moving direction, should be any positive number
    */ 
-  FG_eval(VectorXd &coeffs, double target_velocity, double dir=1): coeffs(coeffs) {
+  FG_eval(Vehicle &vehicle, RoadGeometry &roadGeometry, double target_velocity, double dir=1):
+                    vehicle(vehicle), roadGeometry(roadGeometry) {
     this->target_velocity = target_velocity;
     this->dir = dir;
   }
@@ -71,7 +79,7 @@ class FG_eval {
       }
 
       // Penalize speed with the target speed
-      fg[0] += square(vars[v_start + i]-computeSpeedTarget(vars[psi_start + i], Config::maxSpeed))
+      fg[0] += square(vars[v_start + i] - vehicle.computeSpeedTarget(vars[psi_start + i], Config::maxSpeed))
                   * cost_weights[Config::WEIGHT_V];
       if (vars[v_start + i] < 0) { // Penalize negative speed
         fg[0] += square(vars[v_start + i]) * cost_weights[Config::WEIGHT_NEG_V];
@@ -135,8 +143,8 @@ class FG_eval {
       AD<double> v = v0 + a0 * dt;
       fg[1 + v_start + i] = v1 - v;
       // we want the errors to be close to 0
-      fg[1 + cte_start + i] = cte1 - ((polyeval(coeffs, x0) - y0) + CppAD::sin(epsi0) * vdt);
-      fg[1 + epsi_start + i] = epsi1 - (psi - polypsi(coeffs, x0, 1.0));
+      fg[1 + cte_start + i] = cte1 - ((roadGeometry.centerY(x0) - y0) + CppAD::sin(epsi0) * vdt);
+      fg[1 + epsi_start + i] = epsi1 - (psi - roadGeometry.orientation(x0, 1.0));
     }
   }
 };
@@ -163,8 +171,8 @@ MPC::MPC() {
   // NOTE: Currently the solver has a maximum time limit of 0.5 seconds.
   // Value below 0.25 might not converge well
   options += "Numeric max_cpu_time          " + std::to_string(Config::ipoptTimeout) + "\n";
-
 }
+
 MPC::~MPC() {}
 
 vector<double> MPC::solve(VectorXd &state, double target_velocity, vector<double> *x_trajectory,
@@ -268,7 +276,7 @@ vector<double> MPC::solve(VectorXd &state, double target_velocity, vector<double
   constraints_upperbound[epsi_start] = state[5];
 
   // object that computes objective and constraints
-  FG_eval fg_eval(poly, target_velocity, dir);
+  FG_eval fg_eval(vehicle, roadGeometry, target_velocity, dir);
 
   // place to return solution
   CppAD::ipopt::solve_result<Dvector> solution;
@@ -311,40 +319,22 @@ vector<double> MPC::solve(VectorXd &state, double target_velocity, vector<double
           solution.obj_value};
 }
 
-vector<double> MPC::run(double px, double py, double psi, double v, double steer, vector<double> &ptsx,
-    vector<double> &ptsy,std::vector<double> *x_trajectory, std::vector<double> *y_trajectory) {
-  globalToVehicle(ptsx, ptsy, px, py, psi);
-  // Compute the polynomial coefficients
-  VectorXd xVals(ptsx.size());
-  VectorXd yVals(ptsx.size());
-  for (int i = 0; i < ptsx.size(); i++) {
-    xVals[i] = ptsx[i];
-    yVals[i] = ptsy[i];
-  }
-
-  double fiterr = 0;
-  int order = 2;
-  do { // Compute the polynomial coefficients to an order that has small fitting error
-    poly = polyfit(xVals, yVals, order++);
-    for (int i = 0; i < ptsx.size(); i++) {
-      fiterr = square(ptsy[i] - polyeval(poly, ptsx[i]));
-    }
-  } while (fiterr > 1 && order < Config::maxPolyOrder);
-#ifdef VERBOSE_OUT
-  cout << "Polynominal: " << poly << endl;
-#endif
+vector<double> MPC::run(Vehicle &vehicle, vector<double> &ptsx, vector<double> &ptsy,
+                        std::vector<double> *x_trajectory, std::vector<double> *y_trajectory) {
+  vehicle.globalToVehicle(ptsx, ptsy);
+  roadGeometry.setCenter(ptsx, ptsy, Config::maxFitOrder, Config::maxFitError);
+  this->vehicle = vehicle;
 
   // Calculate the CTE, origin is now 0, 0, optimized for x=0
-  double cte = poly[0];
+  double cte = roadGeometry.centerY(0);
   // Calculate the psi error, origin and psi are now all 0, optimized for x=0
-  double epsi = -atan(poly[1]);
+  double epsi = -atan(roadGeometry.getPolynomial()[1]);
 
   // Compute the maximum speed according to the total psi change on the current center line curve
-  double max_yaw_change = computeYawChange(poly, 0, ptsx.back(), (ptsx.back() - ptsx.front())/ptsx.back());
-  double max_speed = computeYawChangeSpeedLimit(max_yaw_change, Config::maxSpeed);
+  double max_yaw_change = roadGeometry.computeOrientationChange(0, ptsx.back()) * (ptsx.back() - ptsx.front())/ptsx.back();
+  double max_speed = vehicle.computeYawChangeSpeedLimit(max_yaw_change, Config::maxSpeed);
   // Compute the speed target according to steering
-  double target_speed = computeSpeedTarget(steer, max_speed);
-  double steer_value;
+  double target_speed = vehicle.computeSpeedTarget(vehicle.getSteering(), max_speed);
 
   // Set the yaw constraints to MPC
   if (max_yaw_change < 0) {
@@ -356,14 +346,9 @@ vector<double> MPC::run(double px, double py, double psi, double v, double steer
     Config::yawHigh = max_yaw_change;
   }
 
-#ifdef VERBOSE_OUT
-  cout << "Psi: " << psi<< ", ePsi: " << epsi << ", cte: " << cte << ", fit err: " << fiterr 
-  << ", Yaw range: " << Config::yawLow << ", " << Config::yawHigh << ", order: " << order << endl;
-#endif
-
   // Set the initial state, origin and psi are all 0
   VectorXd state(6);
-  state << 0, 0, 0, v, cte, epsi;
+  state << 0, 0, 0, vehicle.getVelocity(), cte, epsi;
 
   // Solve MPC
   auto result = solve(state, target_speed, x_trajectory, y_trajectory);
@@ -376,9 +361,9 @@ vector<double> MPC::run(double px, double py, double psi, double v, double steer
   }
 
   // Clamp the acceleration to the targetted acceleration
-  double accel = std::min(result[7], target_speed - v);
+  double accel = std::min(result[7], target_speed - vehicle.getVelocity());
   // normalize and clamp the steering to -1, and 1
-  steer_value = clamp(steer_angle / Config::maxSteering, -1.0, 1.0);
+  double steer_value = clamp(steer_angle / Config::maxSteering, -1.0, 1.0);
 
   // Try to reduce steering overshot when CTE is high and the steering angle will make CTE to further increase
   if (cte > Config::ctePanic && steer_angle < 0) {
@@ -394,7 +379,8 @@ vector<double> MPC::run(double px, double py, double psi, double v, double steer
   cout << "Steering: " << steer_angle << ", " << result[9] << ", " << result[10] 
   << ", accel: " << result[7] << ", speed: " << result[3] << ", steer: " << steer_value
   << ", target speed: " << target_speed << ", CTE: " << result[4] << ", epsi: " << result[5] 
-  << ", cost: " << result[8] << ", max speed: " << max_speed << endl;
+  << ", cost: " << result[8] << ", max speed: " << max_speed << ", max yaw chaange: " << max_yaw_change
+  << ", ratio: " << (ptsx.back() - ptsx.front())/ptsx.back() << endl;
 #endif
 
   return {result[0], result[1], result[2], result[3], steer_value, accel, result[4], result[5]};
